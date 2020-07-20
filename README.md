@@ -16,3 +16,31 @@ That is where WerTweak comes in. WerTweak is a system tool that hooks itself int
 - WerTweak forces WER to notify the user of *all* crashes, even if they occur in invisible background processes. Furthermore, it unsets certain internal flags set by WER in case a 'special' process (such as `explorer.exe`) crashes, so that these crashes are also reported to the user.
 
 - With WerTweak installed, WER displays the same old-style crash reporting dialog as in previous versions of Windows, meaning that detailed crash information is shown again.
+
+Obtaining the source code
+-------------------------
+
+First make sure that you have a recent version of the [Git client](https://git-scm.com/) (`git`) installed. Then open a Windows command prompt window (note: Git Bash isn't supported). In the command prompt, run these commands:
+```
+> git clone https://github.com/tdebaets/wertweak.git wertweak
+> cd wertweak
+```
+
+Finally, run the `postclone.bat` script. This will take care of further setting up the repository, installing Git hooks, creating output directories etc.:
+```
+> postclone.bat
+```
+
+To keep your repository up-to-date, run the `update.bat` script. This script essentially runs a `git pull` but also performs some basic checks before pulling. It also runs a `git submodule update` after the pull to update the `common` submodule as well.
+
+If you want to contribute to this project, don't clone its main repository, but create your own fork first and clone that fork instead. Then commit/push your work on a topic branch and submit a pull request. For details, see the [generic instructions for contributing to projects](https://github.com/tdebaets/common/blob/master/CONTRIBUTING.md) in the `common` repository.
+
+Building
+--------
+
+WerTweak has been written in C++ using [Microsoft Visual Studio Community 2019](https://visualstudio.microsoft.com/vs/). This means that in order to build this project, you'll need to have Visual Studio 2019 installed. Other releases of Visual Studio may also work but are unsupported.
+
+License
+-------
+
+WerTweak is Copyright © 2020 Tim De Baets. It is licensed under the Mozilla Public License version 2.0, see [LICENSE](LICENSE) for details.

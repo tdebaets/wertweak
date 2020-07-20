@@ -43,4 +43,4 @@ WerTweak has been written in C++ using [Microsoft Visual Studio Community 2019](
 License
 -------
 
-WerTweak is Copyright © 2020 Tim De Baets. It is licensed under the Mozilla Public License version 2.0, see [LICENSE](LICENSE) for details.
+WerTweak is Copyright © 2020 Tim De Baets. It is licensed under the Mozilla Public License version 2.0, see [`LICENSE`](LICENSE) for details.

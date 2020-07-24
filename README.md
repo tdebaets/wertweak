@@ -7,7 +7,7 @@ WerTweak improves the crash reports of Windows Error Reporting (WER) on Windows 
 
 - Even with `DontShowUI` set to `0`, WER will never show crash reports for some specific processes. For example, background processes without any user interface still crash silently. Another example is the `explorer.exe` process, which is always restarted automatically by WER when it has crashed.
 
-- When WER notifies the user of a crash, it does so using a dialog containing only the name of the crashed process. This dialog lacks more detailed information, such as the exact type of crash, the faulting module name, the exception code etc.
+- When WER notifies the user of a crash, it does so using a dialog containing only the name of the crashed process. This dialog lacks more detailed information, such as the exact type of crash, the faulting module name, the exception code etc. ([example](Images/crashreport-before.png?raw=true)).
 
 While these changes might seem acceptable for average Windows users, they are usually not wanted by power users and software developers, who will want to be notified instantly when a process crashes, with a crash report that contains detailed information.
 
@@ -15,7 +15,7 @@ That is where WerTweak comes in. WerTweak is a system tool that hooks itself int
 
 - WerTweak forces WER to notify the user of *all* crashes, even if they occur in invisible background processes. Furthermore, it unsets certain internal flags set by WER in case a 'special' process (such as `explorer.exe`) crashes, so that these crashes are also reported to the user.
 
-- With WerTweak installed, WER displays the same old-style crash reporting dialog as in previous versions of Windows, meaning that detailed crash information is shown again.
+- With WerTweak installed, WER displays the same old-style crash reporting dialog as in previous versions of Windows, meaning that detailed crash information is shown again ([example](Images/crashreport-after.png?raw=true)).
 
 Obtaining the source code
 -------------------------

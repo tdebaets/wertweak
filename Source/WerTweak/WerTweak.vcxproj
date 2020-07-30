@@ -109,6 +109,9 @@
       <EnableUAC>false</EnableUAC>
       <AdditionalDependencies>ntdll.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>call ..\..\Scripts\postbuild.bat $(Configuration) $(Platform)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -127,6 +130,9 @@
       <EnableUAC>false</EnableUAC>
       <AdditionalDependencies>ntdll.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>call ..\..\Scripts\postbuild.bat $(Configuration) $(Platform)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -149,6 +155,9 @@
       <EnableUAC>false</EnableUAC>
       <AdditionalDependencies>ntdll.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>call ..\..\Scripts\postbuild.bat $(Configuration) $(Platform)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -171,6 +180,9 @@
       <EnableUAC>false</EnableUAC>
       <AdditionalDependencies>ntdll.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>call ..\..\Scripts\postbuild.bat $(Configuration) $(Platform)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\common\C\libcommon\Wow64Utils.h" />

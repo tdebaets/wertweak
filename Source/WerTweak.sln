@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29613.14
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WerTweakStub", "WerTweakStub\WerTweakStub.vcxproj", "{BDE31D2F-A7EF-4286-B81E-EF8460AE9BE5}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WerTweak", "WerTweak\WerTweak.vcxproj", "{F97CA51D-B191-4AAC-9CE4-9CF39C56CF11}"
 EndProject
 Global
@@ -13,6 +15,14 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BDE31D2F-A7EF-4286-B81E-EF8460AE9BE5}.Debug|x64.ActiveCfg = Debug|x64
+		{BDE31D2F-A7EF-4286-B81E-EF8460AE9BE5}.Debug|x64.Build.0 = Debug|x64
+		{BDE31D2F-A7EF-4286-B81E-EF8460AE9BE5}.Debug|x86.ActiveCfg = Debug|Win32
+		{BDE31D2F-A7EF-4286-B81E-EF8460AE9BE5}.Debug|x86.Build.0 = Debug|Win32
+		{BDE31D2F-A7EF-4286-B81E-EF8460AE9BE5}.Release|x64.ActiveCfg = Release|x64
+		{BDE31D2F-A7EF-4286-B81E-EF8460AE9BE5}.Release|x64.Build.0 = Release|x64
+		{BDE31D2F-A7EF-4286-B81E-EF8460AE9BE5}.Release|x86.ActiveCfg = Release|Win32
+		{BDE31D2F-A7EF-4286-B81E-EF8460AE9BE5}.Release|x86.Build.0 = Release|Win32
 		{F97CA51D-B191-4AAC-9CE4-9CF39C56CF11}.Debug|x64.ActiveCfg = Debug|x64
 		{F97CA51D-B191-4AAC-9CE4-9CF39C56CF11}.Debug|x64.Build.0 = Debug|x64
 		{F97CA51D-B191-4AAC-9CE4-9CF39C56CF11}.Debug|x86.ActiveCfg = Debug|Win32

@@ -26,8 +26,11 @@ setlocal
 set CONFIGURATION=%1
 set PLATFORM=%2
 
-set COMMONPATH=..\..\common
-set OUTPATH=..\..\Output
+set COMMONDIR=..\..\common
+set OUTDIR=..\..\Output
+
+set SRCDIR=%OUTDIR%\%CONFIGURATION%
+set DSTDIR=%OUTDIR%\x64\%CONFIGURATION%
 
 if [%CONFIGURATION%] equ [] (
     goto usage
@@ -38,8 +41,10 @@ if [%PLATFORM%] equ [] (
 )
 
 if [%PLATFORM%] equ [Win32] (
-    call %COMMONPATH%\Scripts\mycopy.bat ^
-        "%OUTPATH%\%CONFIGURATION%\WerTweak.dll" "%OUTPATH%\x64\%CONFIGURATION%"
+    call %COMMONDIR%\Scripts\createdir.bat "%DSTDIR%"
+    if errorlevel 1 goto failed
+    
+    call %COMMONDIR%\Scripts\mycopy.bat "%SRCDIR%\WerTweak.dll" "%DSTDIR%"
     if errorlevel 1 goto failed
 )
 

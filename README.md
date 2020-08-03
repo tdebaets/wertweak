@@ -40,6 +40,35 @@ Building
 
 WerTweak has been written in C++ using [Microsoft Visual Studio Community 2019](https://visualstudio.microsoft.com/vs/). This means that in order to build this project, you'll need to have Visual Studio 2019 installed. Other releases of Visual Studio may also work but are unsupported.
 
+Installing
+----------
+
+After having built WerTweak, you can manually install it by making an addition to the registry (there's no automatic installer script yet). The exact instructions vary slightly depending on whether you’re running 64-bit or 32-bit Windows:
+
+- **64-bit Windows**
+
+  Navigate to either the `Output\x64\Release` or `Output\x64\Debug` subdirectory of the repository, depending on which build configuration you want to use. Make sure that these 3 files exist in this subdirectory: `WerTweak.dll`, `WerTweak64.dll` and `WerTweak64.exe`. Then add this entry to the registry, replacing `<x64 output directory>` in Data with the full path to the directory that you're currently in:
+  
+  **`HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\WerFault.exe`**
+  
+  Name: `Debugger`
+  
+  Type: `REG_SZ`
+  
+  Data: `<x64 output directory>\WerTweak64.exe`
+
+- **32-bit Windows**
+
+  Navigate to either the `Output\Release` or `Output\Debug` subdirectory of the repository, depending on which build configuration you want to use. Make sure that these 2 files exist in this subdirectory: `WerTweak.dll` and `WerTweak.exe`. Then add this entry to the registry, replacing `<x86 output directory>` in Data with the full path to the directory that you're currently in:
+  
+  **`HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\WerFault.exe`**
+  
+  Name: `Debugger`
+  
+  Type: `REG_SZ`
+  
+  Data: `<x86 output directory>\WerTweak.exe`
+
 License
 -------
 

@@ -43,14 +43,15 @@
 
 #define CONTEXT_IP(pContext) (pContext)->Rip
 
-// native debugging when not a Wow64 process
+// Native debugging when not a Wow64 process
 #define IS_NATIVE_DEBUGGEE_PROCESS(bIsWow64Process) \
     (!bIsWow64Process)
 
 #elif defined(_WIN32)
 
 #define CONTEXT_IP(pContext) (pContext)->Eip
-// native debugging when on 32-bit Windows *or* a Wow64 process
+
+// Native debugging when on 32-bit Windows *or* a Wow64 process
 #define IS_NATIVE_DEBUGGEE_PROCESS(bIsWow64Process) \
     (!g_bIs64BitWindows || bIsWow64Process)
 
@@ -65,7 +66,7 @@ typedef struct tProcInfo
     bool                        bInjected;
     bool                        bFirstBPHit;
     CREATE_PROCESS_DEBUG_INFO   createInfo;
-    BYTE                        bOriginalEntryPointOpcode;
+    BYTE                        byOriginalEntryPointOpcode;
     CONTEXT                     origThreadContext;      // used when bIsNative == true
     WOW64_CONTEXT               origThreadWow64Context; // used when bIsNative == false
     PVOID                       pStubInTarget;
@@ -296,8 +297,8 @@ bool SetEntryPointBP(tProcInfo *pProcInfo)
 {
     if (!ReadTargetMemory(pProcInfo->createInfo.hProcess,
                           pProcInfo->createInfo.lpStartAddress,
-                          &pProcInfo->bOriginalEntryPointOpcode,
-                          sizeof(pProcInfo->bOriginalEntryPointOpcode)))
+                          &pProcInfo->byOriginalEntryPointOpcode,
+                          sizeof(pProcInfo->byOriginalEntryPointOpcode)))
     {
         DbgOut("Failed to read original entry-point opcode from target process (%u)", GetLastError());
         return false;
@@ -318,8 +319,8 @@ bool RemoveEntryPointBP(tProcInfo *pProcInfo)
 {
     return WriteTargetMemory(pProcInfo->createInfo.hProcess,
                              pProcInfo->createInfo.lpStartAddress,
-                             &pProcInfo->bOriginalEntryPointOpcode,
-                             sizeof(pProcInfo->bOriginalEntryPointOpcode));
+                             &pProcInfo->byOriginalEntryPointOpcode,
+                             sizeof(pProcInfo->byOriginalEntryPointOpcode));
 }
 
 bool SaveEntryPointContext(tProcInfo *pProcInfo)
@@ -336,8 +337,8 @@ bool SaveEntryPointContext(tProcInfo *pProcInfo)
             return false;
         }
 
-        // The EIP/RIP in the context structure points past the BP, so
-        // decrement EIP/RIP to point at the original instruction.
+        // The EIP/RIP in the context structure points past the BP, so decrement EIP/RIP to point
+        // at the original instruction.
         CONTEXT_IP(pContext) -= sizeof(OPCODE_INT3);
     }
     else
@@ -352,7 +353,7 @@ bool SaveEntryPointContext(tProcInfo *pProcInfo)
             return false;
         }
 
-        // Same as above
+        // Same comment as above
         pContext->Eip -= sizeof(OPCODE_INT3);
     }
 
@@ -361,8 +362,7 @@ bool SaveEntryPointContext(tProcInfo *pProcInfo)
 
 bool RestoreEntryPointContext(tProcInfo *pProcInfo)
 {
-    // Set the registers back to what they were before we redirected them to
-    // the LoadLibrary stub.
+    // Set the registers back to what they were before we redirected them to the LoadLibrary stub
 
     if (pProcInfo->bIsNative)
     {
@@ -396,7 +396,7 @@ bool InjectCode(tProcInfo *pProcInfo)
     PVOID               pStubInTargetBP     = NULL;
     CONTEXT             stubContext         = pProcInfo->origThreadContext;
     WOW64_CONTEXT       stubWow64Context    = pProcInfo->origThreadWow64Context;
-    bool                result              = false;
+    bool                bResult             = false;
 
     if (pProcInfo->bIs32Bit)
     {
@@ -455,8 +455,7 @@ bool InjectCode(tProcInfo *pProcInfo)
         goto exit;
     }
 
-    // Change the EIP/RIP register in the target thread to point
-    // at the stub we just copied in.
+    // Change the EIP/RIP register in the target thread to point at the stub we just copied in
     if (pProcInfo->bIsNative)
     {
         CONTEXT_IP(&stubContext) = (DWORD64)pStubInTarget;
@@ -474,7 +473,7 @@ bool InjectCode(tProcInfo *pProcInfo)
         {
             DbgOut("Upper 32 bits of stub address in target process are nonzero (0x%p)",
                    pStubInTarget);
-            return false;
+            goto exit;
         }
 
         stubWow64Context.Eip = LODWORD((DWORD64)pStubInTarget);
@@ -491,7 +490,7 @@ bool InjectCode(tProcInfo *pProcInfo)
     pProcInfo->pStubInTargetBP  = pStubInTargetBP;
     pStubInTarget = NULL; // will be freed later TODO
 
-    result = true;
+    bResult = true;
 
 exit:
 
@@ -501,7 +500,7 @@ exit:
         pStubInTarget = NULL;
     }
 
-    return result;
+    return bResult;
 }
 
 bool OnProcessCreate(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
@@ -542,7 +541,7 @@ bool OnProcessCreate(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
     }
     else
     {
-        // 32-bit Windows, no other possibility than 32-bit/native
+        // 32-bit Windows, no other possibility than 32-bit process/native debugging
         pProcInfo->bIs32Bit     = true;
         pProcInfo->bIsNative    = true;
     }
@@ -604,9 +603,9 @@ void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
             return;
         }
 
-        #ifdef SUSPEND_CHILD_PROCESS
+#if defined(SUSPEND_CHILD_PROCESS)
         SuspendThread(pProcInfo->createInfo.hThread);
-        #endif
+#endif
     }
     else if (pEvt->u.Exception.ExceptionRecord.ExceptionAddress ==
                 pProcInfo->pStubInTargetBP)
@@ -635,7 +634,7 @@ void OnLoadDll(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
                               pEvt->u.LoadDll.lpImageName,
                               &pImageNameAddr, sizeof(pImageNameAddr)))
         {
-            DbgOut("Failed to read DLL filename from target process (%u) (1)", GetLastError());
+            DbgOut("Failed to read DLL filename from target process (1) (%u)", GetLastError());
         }
         else if (!pImageNameAddr)
         {
@@ -647,7 +646,7 @@ void OnLoadDll(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
                                     MAX_PATH,
                                     strImageName))
         {
-            DbgOut("Failed to read DLL filename from target process (%u) (3)", GetLastError());
+            DbgOut("Failed to read DLL filename from target process (3) (%u)", GetLastError());
         }
     }
 
@@ -729,7 +728,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
     }
 #endif
 
-    // NOTE: bInheritHandles=True is required for WerFault to function correctly!
+    // NOTE: bInheritHandles=TRUE is required for WerFault to function correctly!
     // TODO: use NtCreateUserProcess with IFEOSkipDebugger flag if WerFault.exe process runs as SYSTEM?
     if (!CreateProcess(NULL,
                        lpCmdLine,
@@ -749,14 +748,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
 
     if (!DebugSetProcessKillOnExit(FALSE))
     {
-        DbgOut("DebugSetProcessKillOnExit failed!");
+        DbgOut("DebugSetProcessKillOnExit failed! (%u)", GetLastError());
     }
 
     /*
-     * When a process crashes, Windows 10 starts two instances of WerFault.exe:
-     * one instance as a SYSTEM process, and one instance as a regular user
-     * process. We're only interested in hooking the user process, so exit if
-     * we're running as SYSTEM.
+     * When a process crashes, Windows 10 starts two instances of WerFault.exe: one instance as a
+     * SYSTEM process, and one instance as a regular user process. We're only interested in hooking
+     * the user process, so exit if we're running as SYSTEM.
      */
     if (IsSystemSid((PSID)&procSid[0]))
     {
@@ -764,7 +762,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
         return 0;
     }
 
-    // for the regular process, using a debugger loop is required for WerFault to function correctly!
+    // For the regular process, using a debugger loop is required for WerFault to function correctly!
     while (bRunning)
     {
         bool bContinue = true;
@@ -785,7 +783,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
             OnProcessException(&g_procInfo, &dbgEvent);
             switch (dbgEvent.u.Exception.ExceptionRecord.ExceptionCode)
             {
-            // A 64-bit debugger debugging a Wow64 process will see both types of breakpoints
+            // A 64-bit debugger debugging a Wow64 process will see both types of breakpoint exceptions
             case EXCEPTION_BREAKPOINT:
 #if defined(_WIN64)
             case STATUS_WX86_BREAKPOINT:

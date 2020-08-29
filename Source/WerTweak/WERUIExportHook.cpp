@@ -21,7 +21,7 @@
 
 #include "pch.h"
 #include "ProjectUtils.h"
-#include "WERUIHook.h"
+#include "WERUIExportHook.h"
 
 static const LPCSTR g_szWerUiApiSetName = "ext-ms-win-wer-ui-l1-1-0.dll";
 static const LPCSTR g_szWerUiCreateName = "WerUICreate";

@@ -24,9 +24,6 @@
     <ClInclude Include="ProjectUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WERUIHook.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="WERHook.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -36,15 +33,18 @@
     <ClInclude Include="..\..\..\common\C\libcommon\Wow64Utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="WERUIExportHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WERExportHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="pch.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="WERUIHook.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="WERHook.cpp">
@@ -72,6 +72,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\common\C\libcommon\Wow64Utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WERUIExportHook.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WERExportHook.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

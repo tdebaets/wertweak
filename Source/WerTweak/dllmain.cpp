@@ -24,6 +24,7 @@
 #include "FaultRepHook.h"
 #include "Processes.h"
 #include "ProjectUtils.h"
+#include "WERExportHook.h"
 #include "WERHook.h"
 
 // TODO: remove topmost extended style from crash report dialogs?

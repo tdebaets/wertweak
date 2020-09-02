@@ -304,8 +304,8 @@ void DoWow64GetKnownDllProcAddress(HWND hWnd)
 {
     TCHAR message[64];
 
-    FARPROC pAddress = Wow64GetKnownDllProcAddress("kernel32.dll", "LoadLibraryW");
-    //FARPROC pAddress = Wow64GetKnownDllProcAddress("kernel32.dll", "HeapAlloc");
+    FARPROC pAddress = Wow64GetKnownDllProcAddress(g_szKernel32, "LoadLibraryW");
+    //FARPROC pAddress = Wow64GetKnownDllProcAddress(g_szKernel32, "HeapAlloc");
 
     StringCbPrintf(message, sizeof(message), TEXT("0x%p"), pAddress);
 

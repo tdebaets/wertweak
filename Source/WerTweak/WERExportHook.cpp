@@ -29,8 +29,8 @@
 #define WER_SUBMIT_PROCESS_IS_IMMERSIVE_BROKER  0x00080000 // PROCESS_UICONTEXT_IMMERSIVE_BROKER
 #define WER_SUBMIT_PROCESS_IS_IMMERSIVE         0x00100000 // PROCESS_UICONTEXT_IMMERSIVE
 
-static const LPCSTR g_szWERDllName          = "wer.dll";
-static const LPCSTR g_szWERReportSubmitName = "WerReportSubmit";
+static const LPCSTR g_szWerDllName          = "wer.dll";
+static const LPCSTR g_szWerReportSubmitName = "WerReportSubmit";
 
 PVOID g_pPrevWerReportSubmit = NULL;
 

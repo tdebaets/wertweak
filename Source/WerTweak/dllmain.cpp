@@ -42,7 +42,7 @@ static const LPCSTR g_szFaultRepDllName = "faultrep.dll";
 void HandleProcessAttach(HMODULE hModule)
 {
     SidWrapper  procSid;
-    HMODULE     hmodWER         = NULL;
+    HMODULE     hmodWer         = NULL;
     HMODULE     hmodFaultRep    = NULL;
 
     DbgOut("WerTweak start"); // TODO: remove?
@@ -65,22 +65,22 @@ void HandleProcessAttach(HMODULE hModule)
         return;
     }
 
-    hmodWER = GetModuleHandleA(g_szWERDllName);
-    if (!hmodWER)
+    hmodWer = GetModuleHandleA(g_szWerDllName);
+    if (!hmodWer)
     {
-        DbgOut("%s module not loaded, exiting", g_szWERDllName);
+        DbgOut("%s module not loaded, exiting", g_szWerDllName);
         return;
     }
 
     try
     {
-        CWERHook werHook(hmodWER);
+        CWERHook werHook(hmodWer);
 
         werHook.HookWER();
     }
     catch (CPEModuleWalkerError & error)
     {
-        DbgOut("Error walking %s import modules: %s", g_szWERDllName, error.what());
+        DbgOut("Error walking %s import modules: %s", g_szWerDllName, error.what());
     }
 
     hmodFaultRep = GetModuleHandleA(g_szFaultRepDllName);

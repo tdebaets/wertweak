@@ -26,6 +26,7 @@
 #include "PEUtils.h"
 #include "ProjectUtils.h"
 #include "WERHook.h"
+#include "WERUIHook.h"
 #include "WERUIExportHook.h"
 
 PRESOLVE_DELAY_LOADED_API g_pPrevWERResolveDelayLoadedAPI = NULL;
@@ -48,7 +49,7 @@ void WERTryHookDelayLoadImport(PVOID               ParentModuleBase,
         pImportName = (PIMAGE_IMPORT_BY_NAME)RVAToAbsolute(ParentModuleBase,
                                                            pNameThunk->u1.AddressOfData);
 
-        if (lstrcmpiA(pImportName->Name, g_szWerUiCreateName) == 0)
+        if (lstrcmpiA(pImportName->Name, g_szWerUICreateName) == 0)
         {
             // TODO: add error checking
             PatchImport(pAddrThunk, NewWerUICreate, (PVOID *)&g_pPrevWerUICreate);
@@ -61,6 +62,29 @@ void WERTryHookDelayLoadImport(PVOID               ParentModuleBase,
                 *ppImportAddress = NewWerUICreate;
             }
         }
+    }
+}
+
+// TODO: move?
+void TryHookWerUI()
+{
+    HMODULE hmodWerUI = GetModuleHandleA(g_szWerUIDllName);
+
+    if (!hmodWerUI)
+    {
+        DbgOut("Warning: %s module not loaded", g_szWerUIDllName);
+        return;
+    }
+
+    try
+    {
+        CWERUIHook werUIHook(hmodWerUI);
+
+        werUIHook.HookWERUI();
+    }
+    catch (CPEModuleWalkerError & error)
+    {
+        DbgOut("Error walking %s import modules: %s", g_szWerUIDllName, error.what());
     }
 }
 
@@ -89,7 +113,7 @@ PVOID WINAPI WERNewResolveDelayLoadedAPI(PVOID                             Paren
 
     dllName = (const char *)RVAToAbsolute(ParentModuleBase, DelayloadDescriptor->DllNameRVA);
 
-    if (lstrcmpiA(dllName, g_szWerUiApiSetName) == 0)
+    if (lstrcmpiA(dllName, g_szWerUIApiSetName) == 0)
     {
         pAddrThunk =
             (PIMAGE_THUNK_DATA)RVAToAbsolute(ParentModuleBase,
@@ -109,6 +133,8 @@ PVOID WINAPI WERNewResolveDelayLoadedAPI(PVOID                             Paren
             pAddrThunk++;
             pNameThunk++;
         }
+
+        TryHookWerUI();
     }
 
     return pImportAddress;
@@ -130,6 +156,10 @@ void CWERHook::PatchImportedModule(PIMAGE_THUNK_DATA pOrigFirstThunk,
         PIMAGE_IMPORT_BY_NAME   pImport     = NULL;
         const char             *importName  = NULL;
 
+        // Ignore imports by ordinal
+        if (pOrigThunk->u1.Ordinal & IMAGE_ORDINAL_FLAG)
+            goto next;
+
         pImport     = (PIMAGE_IMPORT_BY_NAME)RVAToAbsolute(pOrigThunk->u1.AddressOfData);
         importName  = pImport->Name;
 
@@ -140,6 +170,8 @@ void CWERHook::PatchImportedModule(PIMAGE_THUNK_DATA pOrigFirstThunk,
                         WERNewResolveDelayLoadedAPI,
                         (PVOID *)&g_pPrevWERResolveDelayLoadedAPI);
         }
+
+next:
 
         pOrigThunk++;
         pThunk++;

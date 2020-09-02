@@ -48,7 +48,7 @@ void FaultRepTryHookDelayLoadImport(PVOID               ParentModuleBase,
         pImportName = (PIMAGE_IMPORT_BY_NAME)RVAToAbsolute(ParentModuleBase,
                                                            pNameThunk->u1.AddressOfData);
 
-        if (lstrcmpiA(pImportName->Name, g_szWERReportSubmitName) == 0)
+        if (lstrcmpiA(pImportName->Name, g_szWerReportSubmitName) == 0)
         {
             // TODO: add error checking
             PatchImport(pAddrThunk, NewWerReportSubmit, (PVOID *)&g_pPrevWerReportSubmit);
@@ -89,7 +89,7 @@ PVOID WINAPI FaultRepNewResolveDelayLoadedAPI(PVOID                             
 
     dllName = (const char *)RVAToAbsolute(ParentModuleBase, DelayloadDescriptor->DllNameRVA);
 
-    if (lstrcmpiA(dllName, g_szWERDllName) == 0)
+    if (lstrcmpiA(dllName, g_szWerDllName) == 0)
     {
         pAddrThunk =
             (PIMAGE_THUNK_DATA)RVAToAbsolute(ParentModuleBase,
@@ -130,6 +130,10 @@ void CFaultRepHook::PatchImportedModule(PIMAGE_THUNK_DATA pOrigFirstThunk,
         PIMAGE_IMPORT_BY_NAME   pImport     = NULL;
         const char             *importName  = NULL;
 
+        // Ignore imports by ordinal
+        if (pOrigThunk->u1.Ordinal & IMAGE_ORDINAL_FLAG)
+            goto next;
+
         pImport     = (PIMAGE_IMPORT_BY_NAME)RVAToAbsolute(pOrigThunk->u1.AddressOfData);
         importName  = pImport->Name;
 
@@ -140,6 +144,8 @@ void CFaultRepHook::PatchImportedModule(PIMAGE_THUNK_DATA pOrigFirstThunk,
                         FaultRepNewResolveDelayLoadedAPI,
                         (PVOID *)&g_pFaultRepPrevResolveDelayLoadedAPI);
         }
+
+next:
 
         pOrigThunk++;
         pThunk++;

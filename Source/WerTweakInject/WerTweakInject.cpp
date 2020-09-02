@@ -215,7 +215,7 @@ bool GetDllPathToInject(LPCWSTR pszDllName, wstring &refDllPath)
 
 bool GetNativeLoadLibraryAddress()
 {
-    HMODULE hKernel32 = GetModuleHandle(TEXT("kernel32.dll"));
+    HMODULE hKernel32 = GetModuleHandleA(g_szKernel32);
 
     if (!hKernel32)
         return false;
@@ -530,7 +530,7 @@ bool OnProcessCreate(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
 
         if (!pProcInfo->bIsNative && !g_pWow64LoadLibraryW)
         {
-            g_pWow64LoadLibraryW = Wow64GetKnownDllProcAddress("kernel32.dll", "LoadLibraryW");
+            g_pWow64LoadLibraryW = Wow64GetKnownDllProcAddress(g_szKernel32, "LoadLibraryW");
             DbgOut("g_pWow64LoadLibraryW: 0x%p", g_pWow64LoadLibraryW); // TODO: remove
             if (!g_pWow64LoadLibraryW)
             {

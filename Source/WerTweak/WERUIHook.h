@@ -15,18 +15,27 @@
  *
  ****************************************************************************
  *
- * Hook definitions for functions exported by wer.dll
+ * Definitions for IAT hook of werui.dll
  *
  ****************************************************************************/
 
 #pragma once
 
-extern const LPCSTR g_szWerDllName;
-extern const LPCSTR g_szWerReportSubmitName;
+#include "PEModuleWalker.h"
 
-extern PVOID g_pPrevWerReportSubmit;
+class CWERUIHook : public CPEModuleWalker
+{
 
-HRESULT NewWerReportSubmit(HREPORT               hReportHandle,
-                           WER_CONSENT           consent,
-                           DWORD                 dwFlags,
-                           PWER_SUBMIT_RESULT    pSubmitResult);
+public:
+    CWERUIHook(HMODULE hMod) : CPEModuleWalker(hMod) {}
+    void HookWERUI();
+
+protected:
+    virtual bool ImportModuleProc(PIMAGE_IMPORT_DESCRIPTOR  pImpDesc,
+                                  const char               *name);
+
+private:
+    void PatchImportedModule(PIMAGE_THUNK_DATA pOrigFirstThunk,
+                             PIMAGE_THUNK_DATA pFirstThunk);
+
+};

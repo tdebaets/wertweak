@@ -193,6 +193,7 @@
     <ClInclude Include="WERExportHook.h" />
     <ClInclude Include="WERHook.h" />
     <ClInclude Include="WERUIExportHook.h" />
+    <ClInclude Include="WERUIHook.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\common\C\libcommon\DelayLoadUtils.cpp">
@@ -248,6 +249,7 @@
     <ClCompile Include="WERExportHook.cpp" />
     <ClCompile Include="WERHook.cpp" />
     <ClCompile Include="WERUIExportHook.cpp" />
+    <ClCompile Include="WERUIHook.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

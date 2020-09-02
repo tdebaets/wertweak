@@ -21,8 +21,9 @@
 
 #pragma once
 
-extern const LPCSTR g_szWerUiApiSetName;
-extern const LPCSTR g_szWerUiCreateName;
+extern const LPCSTR g_szWerUIDllName;
+extern const LPCSTR g_szWerUIApiSetName;
+extern const LPCSTR g_szWerUICreateName;
 
 extern PVOID g_pPrevWerUICreate;
 

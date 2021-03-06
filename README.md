@@ -72,4 +72,4 @@ After having built WerTweak, you can manually install it by making an addition t
 License
 -------
 
-WerTweak is Copyright © 2020 Tim De Baets. It is licensed under the Mozilla Public License version 2.0, see [`LICENSE`](LICENSE) for details.
+WerTweak is Copyright © 2020-2021 Tim De Baets. It is licensed under the Mozilla Public License version 2.0, see [`LICENSE`](LICENSE) for details.

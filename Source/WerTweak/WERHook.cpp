@@ -72,7 +72,7 @@ void TryHookWerUI()
 
     if (!hmodWerUI)
     {
-        DbgOut("Warning: %s module not loaded", g_szWerUIDllName);
+        DbgOut("Warning: %hs module not loaded", g_szWerUIDllName);
         return;
     }
 
@@ -84,7 +84,7 @@ void TryHookWerUI()
     }
     catch (CPEModuleWalkerError & error)
     {
-        DbgOut("Error walking %s import modules: %s", g_szWerUIDllName, error.what());
+        DbgOut("Error walking %hs import modules: %s", g_szWerUIDllName, error.what());
     }
 }
 

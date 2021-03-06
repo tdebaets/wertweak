@@ -32,7 +32,8 @@
 // TODO: rename or move all framework.h files to a single pch.h file for each project (https://docs.microsoft.com/en-us/windows/uwp/cpp-and-winrt-apis/get-started)
 // TODO: make sure that the WER DontShowUI policy is also set to disabled (otherwise there's no UI at all)
 //   HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting\DontShowUI
-//   "Disabled" value in same key should also be set to 0
+//   HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\DontShowUI
+//   "Disabled" value in same keys should also be set to 0
 // Should also be set to value 1:
 //  HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DataCollection\AllowTelemetry
 // TODO: try to fix double report on Explorer.exe crash (might be related to Symantec Endpoint Protection)
@@ -68,7 +69,7 @@ void HandleProcessAttach(HMODULE hModule)
     hmodWer = GetModuleHandleA(g_szWerDllName);
     if (!hmodWer)
     {
-        DbgOut("%s module not loaded, exiting", g_szWerDllName);
+        DbgOut("%hs module not loaded, exiting", g_szWerDllName);
         return;
     }
 
@@ -80,7 +81,7 @@ void HandleProcessAttach(HMODULE hModule)
     }
     catch (CPEModuleWalkerError & error)
     {
-        DbgOut("Error walking %s import modules: %s", g_szWerDllName, error.what());
+        DbgOut("Error walking %hs import modules: %s", g_szWerDllName, error.what());
     }
 
     hmodFaultRep = GetModuleHandleA(g_szFaultRepDllName);
@@ -94,12 +95,12 @@ void HandleProcessAttach(HMODULE hModule)
         }
         catch (CPEModuleWalkerError & error)
         {
-            DbgOut("Error walking %s import modules: %s", g_szFaultRepDllName, error.what());
+            DbgOut("Error walking %hs import modules: %s", g_szFaultRepDllName, error.what());
         }
     }
     else
     {
-        DbgOut("Warning: %s module not loaded", g_szFaultRepDllName);
+        DbgOut("Warning: %hs module not loaded", g_szFaultRepDllName);
     }
 }
 

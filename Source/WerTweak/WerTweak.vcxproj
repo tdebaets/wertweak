@@ -185,7 +185,6 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\common\C\libcommon\Wow64Utils.h" />
     <ClInclude Include="FaultRepHook.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="pch.h" />

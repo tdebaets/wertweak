@@ -21,9 +21,13 @@
 
 #include "pch.h"
 
+#include <DelayLoadUtils.h>
+
 #include "PEUtils.h"
 #include "ProjectUtils.h"
 #include "WERUIHook.h"
+
+static const LPCSTR g_szWindow0ApiSetName = "ext-ms-win-ntuser-window-l1-1-0.dll";
 
 static const LPCSTR g_szSetWindowPosName = "SetWindowPos";
 
@@ -54,6 +58,92 @@ BOOL WINAPI NewSetWindowPos(HWND    hWnd,
     return ((PSET_WINDOW_POS)g_pPrevSetWindowPos)(hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags);
 }
 
+PRESOLVE_DELAY_LOADED_API g_pPrevWERUIResolveDelayLoadedAPI = NULL;
+
+void WERUITryHookDelayLoadImport(PVOID               ParentModuleBase,
+                                 PIMAGE_THUNK_DATA   ThunkAddress,
+                                 PIMAGE_THUNK_DATA   pAddrThunk,
+                                 PIMAGE_THUNK_DATA   pNameThunk,
+                                 PVOID              *ppImportAddress)
+{
+    PIMAGE_IMPORT_BY_NAME pImportName = NULL;
+
+    if (!pAddrThunk->u1.AddressOfData || !pNameThunk->u1.AddressOfData)
+        return;
+
+    if ((pNameThunk->u1.Ordinal & IMAGE_ORDINAL_FLAG) == 0)
+    {
+        // import by name
+
+        pImportName = (PIMAGE_IMPORT_BY_NAME)RVAToAbsolute(ParentModuleBase,
+                                                           pNameThunk->u1.AddressOfData);
+
+        if (lstrcmpiA(pImportName->Name, g_szSetWindowPosName) == 0)
+        {
+            // TODO: add error checking
+            PatchImport(pAddrThunk, NewSetWindowPos, &g_pPrevSetWindowPos);
+
+            // If ResolveDelayLoadedAPI was called for this specific import, we need to pass back
+            // the hook address for the ResolveDelayLoadedAPI hook function to put the address in
+            // its return value.
+            if (ThunkAddress == pAddrThunk)
+            {
+                *ppImportAddress = NewSetWindowPos;
+            }
+        }
+    }
+}
+
+// TODO: make common by putting it in a utility class (DelayLoadPEModuleWalker?)
+PVOID WINAPI WERUINewResolveDelayLoadedAPI(PVOID                             ParentModuleBase,
+                                           PCIMAGE_DELAYLOAD_DESCRIPTOR      DelayloadDescriptor,
+                                           PDELAYLOAD_FAILURE_DLL_CALLBACK   FailureDllHook,
+                                           PVOID                             FailureSystemHook,
+                                           PIMAGE_THUNK_DATA                 ThunkAddress,
+                                           ULONG                             Flags)
+{
+    PIMAGE_THUNK_DATA   pAddrThunk      = NULL;
+    PIMAGE_THUNK_DATA   pNameThunk      = NULL;
+    PVOID               pImportAddress  = NULL;
+    const char         *dllName         = NULL;
+
+    pImportAddress = g_pPrevWERUIResolveDelayLoadedAPI(ParentModuleBase,
+                                                       DelayloadDescriptor,
+                                                       FailureDllHook,
+                                                       FailureSystemHook,
+                                                       ThunkAddress,
+                                                       Flags);
+
+    if (!CheckResolveDelayLoadedAPIResult(ParentModuleBase, DelayloadDescriptor, ThunkAddress))
+        return pImportAddress;
+
+    dllName = (const char *)RVAToAbsolute(ParentModuleBase, DelayloadDescriptor->DllNameRVA);
+
+    if (lstrcmpiA(dllName, g_szWindow0ApiSetName) == 0)
+    {
+        pAddrThunk =
+            (PIMAGE_THUNK_DATA)RVAToAbsolute(ParentModuleBase,
+                                             DelayloadDescriptor->ImportAddressTableRVA);
+        pNameThunk =
+            (PIMAGE_THUNK_DATA)RVAToAbsolute(ParentModuleBase,
+                                             DelayloadDescriptor->ImportNameTableRVA);
+
+        while (pAddrThunk->u1.AddressOfData && pNameThunk->u1.AddressOfData)
+        {
+            WERUITryHookDelayLoadImport(ParentModuleBase,
+                                        ThunkAddress,
+                                        pAddrThunk,
+                                        pNameThunk,
+                                        &pImportAddress);
+
+            pAddrThunk++;
+            pNameThunk++;
+        }
+    }
+
+    return pImportAddress;
+}
+
 void CWERUIHook::HookWERUI()
 {
     WalkImportModules();
@@ -82,6 +172,13 @@ void CWERUIHook::PatchImportedModule(PIMAGE_THUNK_DATA pOrigFirstThunk,
             // TODO: add error checking
             PatchImport(pThunk, NewSetWindowPos, &g_pPrevSetWindowPos);
         }
+        else if (lstrcmpiA(importName, g_szResolveDelayLoadedAPIName) == 0)
+        {
+            // TODO: add error checking
+            PatchImport(pThunk,
+                        WERUINewResolveDelayLoadedAPI,
+                        (PVOID *)&g_pPrevWERUIResolveDelayLoadedAPI);
+        }
 
 next:
 
@@ -96,7 +193,7 @@ bool CWERUIHook::ImportModuleProc(PIMAGE_IMPORT_DESCRIPTOR  pImpDesc,
     PIMAGE_THUNK_DATA pOrigFirstThunk   = NULL;
     PIMAGE_THUNK_DATA pFirstThunk       = NULL;
 
-    if (lstrcmpiA(name, g_szUser32) == 0)
+    if (lstrcmpiA(name, g_szKernel32) == 0 ||lstrcmpiA(name, g_szUser32) == 0)
     {
         pOrigFirstThunk = (PIMAGE_THUNK_DATA)RVAToAbsolute(pImpDesc->OriginalFirstThunk);
         pFirstThunk     = (PIMAGE_THUNK_DATA)RVAToAbsolute(pImpDesc->FirstThunk);

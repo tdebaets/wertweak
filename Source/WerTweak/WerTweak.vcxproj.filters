@@ -30,9 +30,6 @@
     <ClInclude Include="FaultRepHook.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\common\C\libcommon\Wow64Utils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="WERUIExportHook.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -64,7 +64,7 @@ void FaultRepTryHookDelayLoadImport(PVOID               ParentModuleBase,
     }
 }
 
-// TODO: make common?
+// TODO: make common by putting it in a utility class (DelayLoadPEModuleWalker?)
 PVOID WINAPI FaultRepNewResolveDelayLoadedAPI(PVOID                             ParentModuleBase,
                                               PCIMAGE_DELAYLOAD_DESCRIPTOR      DelayloadDescriptor,
                                               PDELAYLOAD_FAILURE_DLL_CALLBACK   FailureDllHook,

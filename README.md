@@ -1,7 +1,7 @@
 WerTweak
 ========
 
-WerTweak improves the crash reports of Windows Error Reporting (WER) on Windows 10. WER is the component in Windows that is responsible for handling application crashes. Starting with Windows 10, WER has undergone some changes, most notably:
+WerTweak improves the crash reports of Windows Error Reporting (WER) on Windows 10 and 11. WER is the component in Windows that is responsible for handling application crashes. Starting with Windows 10, WER has undergone some changes, most notably:
 
 - When a process has crashed, WER now handles the crash by default in a completely silent way. The crashed process is simply terminated immediately without letting the user know what went wrong. This behavior can be disabled if you set WER's [`DontShowUI`](https://docs.microsoft.com/en-us/windows/win32/wer/wer-settings#DontShowUI) setting to `0`, either via Group Policy or manually in the registry.
 

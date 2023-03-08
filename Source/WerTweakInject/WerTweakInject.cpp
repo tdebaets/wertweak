@@ -729,6 +729,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
 #endif
 
     // NOTE: bInheritHandles=TRUE is required for WerFault to function correctly!
+    // TODO: disable debug heap (by setting _NO_DEBUG_HEAP environment variable)
     // TODO: use NtCreateUserProcess with IFEOSkipDebugger flag if WerFault.exe process runs as SYSTEM?
     if (!CreateProcess(NULL,
                        lpCmdLine,

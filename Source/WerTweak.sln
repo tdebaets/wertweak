@@ -4,10 +4,21 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 16.0.29613.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WerTweakTest", "WerTweakTest\WerTweakTest.vcxproj", "{E39DFB5A-BFC7-411E-9986-F035B714382D}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3E4D08F3-E8D7-4EE7-9A80-768D0973813A} = {3E4D08F3-E8D7-4EE7-9A80-768D0973813A}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WerTweak", "WerTweak\WerTweak.vcxproj", "{F97CA51D-B191-4AAC-9CE4-9CF39C56CF11}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3E4D08F3-E8D7-4EE7-9A80-768D0973813A} = {3E4D08F3-E8D7-4EE7-9A80-768D0973813A}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WerTweakInject", "WerTweakInject\WerTweakInject.vcxproj", "{5FF07D24-139D-467D-AD9F-BBB22C0C34D2}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3E4D08F3-E8D7-4EE7-9A80-768D0973813A} = {3E4D08F3-E8D7-4EE7-9A80-768D0973813A}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcommon", "..\common\C\libcommon\VS2019\libcommon.vcxproj", "{3E4D08F3-E8D7-4EE7-9A80-768D0973813A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,6 +52,14 @@ Global
 		{5FF07D24-139D-467D-AD9F-BBB22C0C34D2}.Release|x64.Build.0 = Release|x64
 		{5FF07D24-139D-467D-AD9F-BBB22C0C34D2}.Release|x86.ActiveCfg = Release|Win32
 		{5FF07D24-139D-467D-AD9F-BBB22C0C34D2}.Release|x86.Build.0 = Release|Win32
+		{3E4D08F3-E8D7-4EE7-9A80-768D0973813A}.Debug|x64.ActiveCfg = Debug|x64
+		{3E4D08F3-E8D7-4EE7-9A80-768D0973813A}.Debug|x64.Build.0 = Debug|x64
+		{3E4D08F3-E8D7-4EE7-9A80-768D0973813A}.Debug|x86.ActiveCfg = Debug|Win32
+		{3E4D08F3-E8D7-4EE7-9A80-768D0973813A}.Debug|x86.Build.0 = Debug|Win32
+		{3E4D08F3-E8D7-4EE7-9A80-768D0973813A}.Release|x64.ActiveCfg = Release|x64
+		{3E4D08F3-E8D7-4EE7-9A80-768D0973813A}.Release|x64.Build.0 = Release|x64
+		{3E4D08F3-E8D7-4EE7-9A80-768D0973813A}.Release|x86.ActiveCfg = Release|Win32
+		{3E4D08F3-E8D7-4EE7-9A80-768D0973813A}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

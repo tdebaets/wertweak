@@ -41,6 +41,7 @@
 #define ID_FILE_WERREPORTSUBMIT         32776
 #define IDM_WER_REPORT_SUBMIT           32777
 #define ID_FILE_CRASH                   32778
+#define IDM_HANG                        32790
 #define IDM_CRASH                       32779
 #define ID_FILE_WOW64GETKNOWNDLLPRO     32780
 #define IDM_WOW64GETKNOWNDLLPROCADDR    32781

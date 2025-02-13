@@ -293,6 +293,12 @@ void DoRegisterAppRestart(HWND hWnd)
     }
 }
 
+void DoHang()
+{
+    // Busy operation
+    for (;;);
+}
+
 void DoCrash()
 {
     LPDWORD *pdwTest = NULL;
@@ -358,6 +364,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
+                break;
+            case IDM_HANG:
+                DoHang();
                 break;
             case IDM_CRASH:
                 DoCrash();

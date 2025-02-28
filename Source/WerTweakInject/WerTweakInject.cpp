@@ -519,7 +519,7 @@ bool OnProcessCreate(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
         /* 
          * Prevent debugging a 64-bit process by a 32-bit debugger. This should be already blocked
          * by CreateProcess (ERROR_NOT_SUPPORTED), but checking here anyway just to be sure.
-        */
+         */
 #if !defined(_WIN64)
         if (!pProcInfo->bIs32Bit)
         {
@@ -546,11 +546,19 @@ bool OnProcessCreate(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
         pProcInfo->bIsNative    = true;
     }
 
-    DbgOut("Debugging a %hs process (%hs bitness)",
+    DbgOut("Debugging process with ID %u (%hs, %hs bitness)",
+           pEvt->dwProcessId,
            pProcInfo->bIs32Bit ? "32-bit" : "64-bit",
            pProcInfo->bIsNative ? "native" : "non-native");
 
     return true;
+}
+
+void OnProcessExit(DEBUG_EVENT* pEvt)
+{
+    DbgOut("Process with ID %u exited with code 0x%x",
+           pEvt->dwProcessId,
+           pEvt->u.ExitProcess.dwExitCode);
 }
 
 void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
@@ -568,6 +576,7 @@ void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
             return;
     }
 
+    // TODO: bInjected is currently never set to true, fix this
     if (pProcInfo->bInjected)
         return;
 
@@ -611,6 +620,8 @@ void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
                 pProcInfo->pStubInTargetBP)
     {
         DbgOut("Stub breakpoint hit");
+
+        // TODO: log handle of the loaded DLL (EAX/RAX)?
 
         if (!RestoreEntryPointContext(pProcInfo))
         {
@@ -671,6 +682,36 @@ void OnDebugString(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
     DbgOut("Debug string: %ws", dbgString.c_str());
 }
 
+void MakeAllOurObjectHandlesInheritable()
+{
+    PPROCESS_HANDLE_SNAPSHOT_INFORMATION    pHandles = NULL;
+    NTSTATUS                                status;
+
+    status = PhEnumHandlesEx2(GetCurrentProcess(), &pHandles);
+    if (!NT_SUCCESS(status))
+    {
+        DbgOut("PhEnumHandlesEx2 failed (%x)", status);
+        return;
+    }
+
+    for (int i = 0; i < pHandles->NumberOfHandles; i++)
+    {
+        PROCESS_HANDLE_TABLE_ENTRY_INFO *pInfo = &pHandles->Handles[i];
+
+        // TODO: only for specific object types? (check ObjectTypeIndex)
+        // TODO: add generic macro for checking flag in bitmask
+        if ((pInfo->HandleAttributes & OBJ_INHERIT) == 0)
+        {
+            if (!SetHandleInformation(pInfo->HandleValue, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
+            {
+                DbgOut("SetHandleInformation(0x%x) failed (%u)", pInfo->HandleValue, GetLastError());
+            }
+        }
+    }
+
+    delete[] pHandles;
+}
+
 int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
                       _In_opt_ HINSTANCE    hPrevInstance,
                       _In_ LPWSTR           lpCmdLine,
@@ -728,7 +769,26 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
     }
 #endif
 
-    // NOTE: bInheritHandles=TRUE is required for WerFault to function correctly!
+    /*
+     * When WerSvc launches WerFault.exe for a hung process, the service duplicates a few object
+     * handles into the context of WerFault (in my testing, 2 file mapping handles and 5 event
+     * handles). The duplicated handle values are then passed to WerFault via a named file mapping,
+     * of which the name is passed to WerFault via the command line (example:
+     * "/shared Global\8928ad8824614ac9aadef800e0ddd09f"). However, for duplicating these handles,
+     * WerSvc uses DuplicateHandle() calls with the bInheritHandle parameter set to FALSE, so when
+     * WerSvc actually launches WerTweak instead of WerFault, the duplicated handle values are only
+     * valid in the context of the WerTweak child process and not in the WerFault grandchild process.
+     * This causes WerFault to fail to properly handle the hung process and exit prematurely with an
+     * exit code of 0x80070006 ("Invalid handle").
+     * To fix this, we enumerate all object handles in the current process, check if they have the
+     * 'inheritable' flag set, and if not, set the flag after all. This might seem like overkill, but
+     * it's probably the only way to ensure that the duplicated handle values stay valid in
+     * WerFault's context.
+     */
+    MakeAllOurObjectHandlesInheritable();
+
+    // NOTE: bInheritHandles=TRUE is required for WerFault to function correctly! (and even more so
+    // in the case of a hung process, see comment above)
     // TODO: disable debug heap (by setting _NO_DEBUG_HEAP environment variable)
     // TODO: use NtCreateUserProcess with IFEOSkipDebugger flag if WerFault.exe process runs as SYSTEM?
     if (!CreateProcess(NULL,
@@ -766,7 +826,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
     // For the regular process, using a debugger loop is required for WerFault to function correctly!
     while (bRunning)
     {
-        bool bContinue = true;
+        bool bContinue = true; // TODO: just use 'continue' instead
 
         if (!WaitForDebugEvent(&dbgEvent, INFINITE))
             break;
@@ -778,6 +838,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
                 goto exit;
             break;
         case EXIT_PROCESS_DEBUG_EVENT:
+            OnProcessExit(&dbgEvent);
             bRunning = false;
             break;
         case EXCEPTION_DEBUG_EVENT:
@@ -825,5 +886,6 @@ exit:
 
     DbgOut("Done");
 
+    // TODO: exit with same code as WerFault did?
     return 0;
 }

@@ -193,7 +193,7 @@ bool CWERUIHook::ImportModuleProc(PIMAGE_IMPORT_DESCRIPTOR  pImpDesc,
     PIMAGE_THUNK_DATA pOrigFirstThunk   = NULL;
     PIMAGE_THUNK_DATA pFirstThunk       = NULL;
 
-    if (lstrcmpiA(name, g_szKernel32) == 0 ||lstrcmpiA(name, g_szUser32) == 0)
+    if (lstrcmpiA(name, g_szKernel32) == 0 || lstrcmpiA(name, g_szUser32) == 0)
     {
         pOrigFirstThunk = (PIMAGE_THUNK_DATA)RVAToAbsolute(pImpDesc->OriginalFirstThunk);
         pFirstThunk     = (PIMAGE_THUNK_DATA)RVAToAbsolute(pImpDesc->FirstThunk);

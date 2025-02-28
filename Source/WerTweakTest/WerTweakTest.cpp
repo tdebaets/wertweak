@@ -318,6 +318,56 @@ void DoWow64GetKnownDllProcAddress(HWND hWnd)
     MessageBox(hWnd, message, NULL, MB_OK);
 }
 
+void DoRunWerFaultAndWait(HWND hWnd)
+{
+    STARTUPINFO         startupInfo = {};
+    PROCESS_INFORMATION procInfo    = {};
+    DWORD               dwExitCode  = 0;
+    wostringstream      oss;
+
+    startupInfo.cb = sizeof(startupInfo);
+
+    if (!CreateProcess(L"C:\\Windows\\System32\\WerFault.exe", // TODO
+                       NULL,
+                       NULL, NULL,
+                       TRUE, /* bInheritHandles */
+                       CREATE_SUSPENDED,
+                       NULL, NULL,
+                       &startupInfo,
+                       &procInfo))
+    {
+        oss << L"CreateProcess() failed: " << GetLastError();
+        goto exit;
+    }
+
+    MessageBox(hWnd,
+               L"WerFault.exe created in suspended state, click OK to resume.",
+               NULL,
+               MB_ICONINFORMATION);
+
+    ResumeThread(procInfo.hThread);
+    
+    oss << "hProcess: " << procInfo.hProcess << endl <<
+        "Process ID: " << GetProcessId(procInfo.hProcess) << endl;
+
+    WaitForSingleObject(procInfo.hProcess, INFINITE);
+
+    if (!GetExitCodeProcess(procInfo.hProcess, &dwExitCode))
+    {
+        oss << L"GetExitCodeProcess() failed: " << GetLastError();
+        goto exit;
+    }
+
+    oss << "Process exited with code " << dwExitCode;
+
+exit:
+
+    MessageBox(hWnd, oss.str().c_str(), NULL, MB_ICONINFORMATION);
+
+    CloseHandleSafe(&procInfo.hProcess);
+    CloseHandleSafe(&procInfo.hThread);
+}
+
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -358,6 +408,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 break;
             case IDM_REGISTER_APP_RESTART:
                 DoRegisterAppRestart(hWnd);
+                break;
+            case IDM_RUNWERFAULT:
+                DoRunWerFaultAndWait(hWnd);
                 break;
             case IDM_ABOUT:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);

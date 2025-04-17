@@ -2,7 +2,7 @@
  *
  *            WerTweak
  *
- *            Copyright (c) 2020 Tim De Baets
+ *            Copyright (c) 2025 Tim De Baets
  *
  ****************************************************************************
  *
@@ -15,26 +15,31 @@
  *
  ****************************************************************************
  *
- * Pre-compiled header file for the WerTweak test application
+ * Definitions for IAT hook of WerFault.exe
  *
  ****************************************************************************/
 
 #pragma once
 
-#include "targetver.h"
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
-// Windows Header Files
-#include <windows.h>
-#include <strsafe.h>
-// C RunTime Header Files
-#include <stdlib.h>
-#include <malloc.h>
-#include <memory.h>
-#include <tchar.h>
-#include <winternl.h>
-#include <ProcessSnapshot.h>
+#include "PEModuleWalker.h"
 
-#include <set>
-#include <sstream>
+extern const LPCSTR g_szProcessSnapshotApiSetName;
 
-using namespace std;
+extern HPSS TranslateSnapshotHandleByDebugger(HPSS SnapshotHandle);
+
+class CWERFaultHook : public CPEModuleWalker
+{
+
+public:
+    CWERFaultHook(HMODULE hMod) : CPEModuleWalker(hMod) {}
+    void HookWERFault();
+
+protected:
+    virtual bool ImportModuleProc(PIMAGE_IMPORT_DESCRIPTOR  pImpDesc,
+                                  const char               *name);
+
+private:
+    void PatchImportedModule(PIMAGE_THUNK_DATA pOrigFirstThunk,
+                             PIMAGE_THUNK_DATA pFirstThunk);
+
+};

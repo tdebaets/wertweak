@@ -25,7 +25,13 @@
 #include <Wow64Utils.h>
 
 #include "..\WerTweak\ProjectUtils.h"
+#include "WerTweakInject.h"
 
+// TODO: add compile script
+// TODO: fix release mode WerTweak64.exe crashing on process close when handling hang/crash (only on Win10?)
+// TODO: fix WerFault.exe crashing with access violation (0xc0000005) when handling a Wow64 crash on Win11
+// TODO: retest with crash handling
+// TODO: test on Win11 insider preview
 // TODO: add memleak checks
  
 #define OPCODE_INT3         ((BYTE)0xCC)
@@ -42,6 +48,7 @@
 #if defined(_WIN64)
 
 #define CONTEXT_IP(pContext) (pContext)->Rip
+#define CONTEXT_AX(pContext) (pContext)->Rax
 
 // Native debugging when not a Wow64 process
 #define IS_NATIVE_DEBUGGEE_PROCESS(bIsWow64Process) \
@@ -50,6 +57,7 @@
 #elif defined(_WIN32)
 
 #define CONTEXT_IP(pContext) (pContext)->Eip
+#define CONTEXT_AX(pContext) (pContext)->Eax
 
 // Native debugging when on 32-bit Windows *or* a Wow64 process
 #define IS_NATIVE_DEBUGGEE_PROCESS(bIsWow64Process) \
@@ -77,6 +85,14 @@ tProcInfo   g_procInfo              = {};
 FARPROC     g_pNativeLoadLibraryW   = NULL;
 FARPROC     g_pWow64LoadLibraryW    = NULL;
 bool        g_bIs64BitWindows       = false;
+
+/*
+ * Mapping of process snapshot handles in the context of this process to snapshot handles in the
+ * context of WerFault.exe. Used for translating these snapshot handles from the original handle
+ * value to the duplicated handle value, see HandleTranslateProcessSnapshotHandle().
+ */
+typedef std::map<HPSS, HPSS> tProcessSnapshotMap;
+tProcessSnapshotMap g_processSnapshotMap;
 
 #pragma pack(push, 1)
 typedef struct tLoadLibraryStub32
@@ -224,7 +240,7 @@ bool GetNativeLoadLibraryAddress()
      * Get the address of the native LoadLibraryW function in kernel32.dll. This address can only
      * be used when our architecture matches the architecture of the debuggee. In the other case
      * (64-bit debugger debugging a Wow64 process), we need another way to get the correct
-     * LoadLibraryW address, see the Wow64GetKnownDllProcAddress() call in InjectCode().
+     * LoadLibraryW address, see the Wow64GetKnownDllProcAddress() call in OnProcessCreate().
      */
     g_pNativeLoadLibraryW = GetProcAddress(hKernel32, "LoadLibraryW");
 
@@ -503,6 +519,76 @@ exit:
     return bResult;
 }
 
+bool HandleTranslateProcessSnapshotHandle(tProcInfo *pProcInfo)
+{
+    CONTEXT context         = {};
+    PVOID   pSnapshotHandle = NULL;
+    HPSS    hSnapshot       = NULL;
+    HPSS    hTargetSnapshot = NULL;
+
+    context.ContextFlags = CONTEXT_FULL;
+
+    /*
+     * When being launched for a 32-bit process, WerFault doesn't appear to require any translation
+     * of process snapshot handles (both on 32-bit and 64-bit Windows), so we can just skip this
+     * case.
+     * Note for 64-bit Windows (non-native): if this would every be required after all, we will have
+     * to call Wow64GetThreadContext() instead of GetThreadContext() and the
+     * ReadTargetMemory()/WriteTargetMemory() calls will have to be modified to read/write a 32-bit
+     * HPSS value instead of a 64-bit value.
+     * Note for 32-bit Windows (native): this was already quickly tested and should just work as is.
+     */
+    if (pProcInfo->bIs32Bit)
+    {
+        DbgOut("Snapshot handle translation only needed/supported for 64-bit processes");
+        return true;
+    }
+
+    // TODO: fix thread handle
+    if (!GetThreadContext(pProcInfo->createInfo.hThread, &context))
+    {
+        DbgOut("GetThreadContext failed (%u)", GetLastError());
+        return false;
+    }
+
+    pSnapshotHandle = (HPSS)CONTEXT_AX(&context);
+
+    DbgOut("Snapshot handle address: %p", pSnapshotHandle);
+
+    if (!pSnapshotHandle)
+        return false;
+
+    if (!ReadTargetMemory(pProcInfo->createInfo.hProcess,
+                          pSnapshotHandle,
+                          &hSnapshot, sizeof(hSnapshot)))
+    {
+        DbgOut("Failed to read snapshot handle (%u)", GetLastError());
+        return false;
+    }
+
+    tProcessSnapshotMap::const_iterator iter = g_processSnapshotMap.find(hSnapshot);
+    if (iter == g_processSnapshotMap.end())
+    {
+        DbgOut("Snapshot handle 0x%p not found in map", hSnapshot);
+        return false;
+    }
+
+    hTargetSnapshot = iter->second;
+
+    DbgOut("Snapshot handle: 0x%p -> 0x%p", hSnapshot, hTargetSnapshot);
+
+    if (!WriteTargetMemory(pProcInfo->createInfo.hProcess,
+                           pSnapshotHandle,
+                           &hTargetSnapshot,
+                           sizeof(hTargetSnapshot)))
+    {
+        DbgOut("Failed to write snapshot handle (%u)", GetLastError());
+        return false;
+    }
+
+    return true;
+}
+
 bool OnProcessCreate(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
 {
     pProcInfo->createInfo = pEvt->u.CreateProcessInfo;
@@ -576,59 +662,67 @@ void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
             return;
     }
 
-    // TODO: bInjected is currently never set to true, fix this
     if (pProcInfo->bInjected)
-        return;
-
-    if (!pProcInfo->bFirstBPHit)
     {
-        pProcInfo->bFirstBPHit = true;
+        // TODO: check exception address
+        DbgOut("Breakpoint during regular execution");
 
-        if (!SetEntryPointBP(pProcInfo))
-        {
-            DbgOut("Failed to initialize hook");
-        }
+        HandleTranslateProcessSnapshotHandle(pProcInfo);
     }
-    else if (pEvt->u.Exception.ExceptionRecord.ExceptionAddress ==
-                pProcInfo->createInfo.lpStartAddress)
+    else
     {
-        DbgOut("Process entry point hit");
-
-        if (!RemoveEntryPointBP(pProcInfo))
+        if (!pProcInfo->bFirstBPHit)
         {
-            DbgOut("Failed to remove entry point breakpoint");
-            return;
-        }
+            pProcInfo->bFirstBPHit = true;
 
-        if (!SaveEntryPointContext(pProcInfo))
-        {
-            DbgOut("Failed to save entry point context");
-            return;
+            if (!SetEntryPointBP(pProcInfo))
+            {
+                DbgOut("Failed to initialize hook");
+            }
         }
+        else if (pEvt->u.Exception.ExceptionRecord.ExceptionAddress ==
+                    pProcInfo->createInfo.lpStartAddress)
+        {
+            DbgOut("Process entry point hit");
 
-        if (!InjectCode(pProcInfo))
-        {
-            DbgOut("Failed to inject code");
-            return;
-        }
+            if (!RemoveEntryPointBP(pProcInfo))
+            {
+                DbgOut("Failed to remove entry point breakpoint");
+                return;
+            }
+
+            if (!SaveEntryPointContext(pProcInfo))
+            {
+                DbgOut("Failed to save entry point context");
+                return;
+            }
+
+            if (!InjectCode(pProcInfo))
+            {
+                DbgOut("Failed to inject code");
+                return;
+            }
 
 #if defined(SUSPEND_CHILD_PROCESS)
-        SuspendThread(pProcInfo->createInfo.hThread);
+            SuspendThread(pProcInfo->createInfo.hThread);
 #endif
-    }
-    else if (pEvt->u.Exception.ExceptionRecord.ExceptionAddress ==
-                pProcInfo->pStubInTargetBP)
-    {
-        DbgOut("Stub breakpoint hit");
-
-        // TODO: log handle of the loaded DLL (EAX/RAX)?
-
-        if (!RestoreEntryPointContext(pProcInfo))
-        {
-            DbgOut("Failed to restore entry point context");
         }
+        else if (pEvt->u.Exception.ExceptionRecord.ExceptionAddress ==
+                    pProcInfo->pStubInTargetBP)
+        {
+            DbgOut("Stub breakpoint hit");
 
-        // TODO: free stub
+            // TODO: log handle of the loaded DLL (EAX/RAX)?
+
+            if (!RestoreEntryPointContext(pProcInfo))
+            {
+                DbgOut("Failed to restore entry point context");
+            }
+
+            // TODO: free stub
+
+            pProcInfo->bInjected = true;
+        }
     }
 }
 
@@ -684,7 +778,8 @@ void OnDebugString(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
 
 void MakeAllOurObjectHandlesInheritable()
 {
-    PPROCESS_HANDLE_SNAPSHOT_INFORMATION    pHandles = NULL;
+    PPROCESS_HANDLE_SNAPSHOT_INFORMATION    pHandles        = NULL;
+    DWORD                                   dwNumHandles    = 0;
     NTSTATUS                                status;
 
     status = PhEnumHandlesEx2(GetCurrentProcess(), &pHandles);
@@ -702,14 +797,109 @@ void MakeAllOurObjectHandlesInheritable()
         // TODO: add generic macro for checking flag in bitmask
         if ((pInfo->HandleAttributes & OBJ_INHERIT) == 0)
         {
-            if (!SetHandleInformation(pInfo->HandleValue, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
+            if (SetHandleInformation(pInfo->HandleValue, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
             {
-                DbgOut("SetHandleInformation(0x%x) failed (%u)", pInfo->HandleValue, GetLastError());
+                dwNumHandles++;
+            }
+            else
+            {
+                DbgOut("SetHandleInformation(0x%p) failed (%u)", pInfo->HandleValue, GetLastError());
             }
         }
     }
 
+    DbgOut("Made %u object handles inheritable", dwNumHandles);
+
     delete[] pHandles;
+}
+
+DWORD PssDuplicateSnapshotExceptionFilter(DWORD dwExceptionCode)
+{
+    DbgOut("Exception during PssDuplicateSnapshot: 0x%x", dwExceptionCode);
+
+    switch (dwExceptionCode)
+    {
+    case EXCEPTION_INVALID_HANDLE:
+    // EXCEPTION_ACCESS_VIOLATION can occur when handling a Wow64 crash and the 32-bit WerFault only
+    // passes us the lower 32 bits of a 64-bit HPSS handle.
+    case EXCEPTION_ACCESS_VIOLATION:
+        return EXCEPTION_EXECUTE_HANDLER;
+    default:
+        // Unexpected exception
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
+}
+
+bool TryPssDuplicateSnapshot(HPSS hSnapshot, HANDLE hTargetProcess, HPSS *phTargetSnapshot)
+{
+    DWORD dwResult;
+
+    __try
+    {
+        dwResult = PssDuplicateSnapshot(GetCurrentProcess(),
+                                        hSnapshot,
+                                        hTargetProcess,
+                                        phTargetSnapshot,
+                                        PSS_DUPLICATE_NONE);
+        if (dwResult == ERROR_SUCCESS)
+        {
+            DbgOut("PssDuplicateSnapshot succeeded: 0x%p", *phTargetSnapshot);
+        }
+        else
+        {
+            DbgOut("PssDuplicateSnapshot failed (%u)", dwResult);
+            return false;
+        }
+    }
+    __except (PssDuplicateSnapshotExceptionFilter(GetExceptionCode()))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+void DuplicateAllOurProcessSnapshotHandles(HANDLE hTargetProcess)
+{
+    PBYTE                       pBaseAddr       = NULL;
+    DWORD                       dwNumSnapshots  = 0;
+    MEMORY_BASIC_INFORMATION    mbi;
+
+    while (VirtualQuery(pBaseAddr, &mbi, sizeof(mbi)))
+    {
+        if (mbi.State == MEM_COMMIT && mbi.Protect == PAGE_READWRITE)
+        {
+            if (mbi.Type != MEM_PRIVATE)
+                goto next_region;
+
+            /* This should always pass, but check anyway to be sure */
+            if (mbi.RegionSize < sizeof(PSSNT_SIGNATURE_PSSD_LE))
+                goto next_region;
+
+            if (*(PDWORD)mbi.BaseAddress == PSSNT_SIGNATURE_PSSD_LE)
+            {
+                HPSS    hSnapshot       = (HPSS)mbi.BaseAddress;
+                HPSS    hTargetSnapshot = NULL;
+
+                if (TryPssDuplicateSnapshot(hSnapshot, hTargetProcess, &hTargetSnapshot))
+                {
+                    g_processSnapshotMap.insert({hSnapshot, hTargetSnapshot});
+
+                    dwNumSnapshots++;
+                }
+                else
+                {
+                    DbgOut("Failed to duplicate snapshot handle 0x%p", hSnapshot);
+                }
+            }
+        }
+
+next_region:
+
+        pBaseAddr += mbi.RegionSize;
+    }
+
+    DbgOut("Duplicated %u process snapshot handles", dwNumSnapshots);
 }
 
 int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
@@ -803,6 +993,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
         DbgOut("CreateProcess failed (%u)", GetLastError());
         return 6;
     }
+
+    /*
+     * When WerSvc launches WerFault.exe for a hung process, the service first captures a process
+     * snapshot (PssCaptureSnapshot) and then duplicates the resulting snapshot handle into the
+     * context of WerFault by calling PssDuplicateSnapshot().
+     * However, just like with the kernel object handles above, when WerSvc actually launches
+     * WerTweak instead of WerFault, the duplicated snapshot handle value is only valid in the
+     * context of the WerTweak child process and not in the WerFault grandchild process. Because
+     * process snapshot handles are *not* kernel object handles, they are not covered by the
+     * MakeAllOurObjectHandlesInheritable() call above. Process snapshot handles also cannot be
+     * made inheritable, so we need a different approach here: we enumerate all process snapshot
+     * handles in the current process and duplicate each handle into the context of WerFault by also
+     * calling PssDuplicateSnapshot(). Because the value of the duplicated handle will be different
+     * from the value of the original handle, we must also hook all process snapshot functions
+     * called by WerFault that receive a snapshot handle, and translate the original handle to the
+     * duplicated handle before the hooked function is effectively called.
+     */
+    DuplicateAllOurProcessSnapshotHandles(procInfo.hProcess);
 
     CloseHandleSafe(&procInfo.hProcess);
     CloseHandleSafe(&procInfo.hThread);

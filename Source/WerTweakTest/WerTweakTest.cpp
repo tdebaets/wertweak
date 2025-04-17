@@ -26,6 +26,7 @@
 #include <Wow64Utils.h>
 
 #include "..\WerTweak\ProjectUtils.h"
+#include "..\WerTweakInject\WerTweakInject.h"
 
 #define MAX_LOADSTRING 100
 
@@ -368,6 +369,99 @@ exit:
     CloseHandleSafe(&procInfo.hThread);
 }
 
+void DoPssCaptureSnapshot()
+{
+    DWORD   dwResult;
+    HPSS    hSnapshot = NULL;
+
+    dwResult = PssCaptureSnapshot(GetCurrentProcess(), PSS_CAPTURE_NONE, 0, &hSnapshot);
+
+    if (dwResult == 0)
+    {
+        DbgOut("PssCaptureSnapshot succeeded, handle: 0x%p", hSnapshot);
+    }
+    else
+    {
+        DbgOut("PssCaptureSnapshot failed with error %u", dwResult);
+    }
+}
+
+void DoPssDuplicateSnapshot()
+{
+    HPSS targetSnapshotHandle = NULL;
+
+    __try
+    {
+        PssDuplicateSnapshot(GetCurrentProcess(),
+                             (HPSS)0xBADF00D,
+                             GetCurrentProcess(),
+                             &targetSnapshotHandle,
+                             PSS_DUPLICATE_NONE);
+    }
+    __except (GetExceptionCode() == EXCEPTION_INVALID_HANDLE ? 
+              EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+    {
+        DbgOut("Exception during PssDuplicateSnapshot: 0x%x", GetExceptionCode());
+    }
+}
+
+void DoListMemoryRegions()
+{
+    PBYTE                    pBaseAddr = NULL;
+    MEMORY_BASIC_INFORMATION mbi;
+    std::set<HPSS>           processSnapshotSet;
+
+    while (VirtualQuery(pBaseAddr, &mbi, sizeof(mbi)))
+    {
+        if (mbi.State == MEM_COMMIT && mbi.Protect == PAGE_READWRITE)
+        {
+            DbgOut("0x%p, size: %u KB", mbi.BaseAddress, mbi.RegionSize / 1024);
+
+            if (mbi.Type != MEM_PRIVATE)
+                goto next_region;
+
+            /* This should always pass, but check anyway to be sure */
+            if (mbi.RegionSize < sizeof(PSSNT_SIGNATURE_PSSD_LE))
+                goto next_region;
+
+            if (*(PDWORD)mbi.BaseAddress == PSSNT_SIGNATURE_PSSD_LE)
+            {
+                DbgOut("  process snapshot detected");
+
+                /*
+                 * We need to store the snaphots in a list first to prevent infinitely looping over
+                 * newly created snaphots.
+                 */
+                processSnapshotSet.insert((HPSS)mbi.BaseAddress);
+            }
+        }
+
+next_region:
+
+        pBaseAddr += mbi.RegionSize;
+    }
+
+    for (HPSS hSnapshot : processSnapshotSet)
+    {
+        HPSS    targetSnapshotHandle = NULL;
+        DWORD   dwResult;
+
+        dwResult = PssDuplicateSnapshot(GetCurrentProcess(),
+                                        hSnapshot,
+                                        GetCurrentProcess(),
+                                        &targetSnapshotHandle,
+                                        PSS_DUPLICATE_NONE);
+        if (dwResult == ERROR_SUCCESS)
+        {
+            DbgOut("PssDuplicateSnapshot succeeded: 0x%x", targetSnapshotHandle);
+        }
+        else
+        {
+            DbgOut("PssDuplicateSnapshot failed (%u)", dwResult);
+        }
+    }
+}
+
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -411,6 +505,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 break;
             case IDM_RUNWERFAULT:
                 DoRunWerFaultAndWait(hWnd);
+                break;
+            case IDM_PSSCAPTURESNAPSHOT:
+                DoPssCaptureSnapshot();
+                break;
+            case IDM_PSSDUPLICATESNAPSHOT:
+                DoPssDuplicateSnapshot();
+                break;
+            case IDM_LISTMEMREGIONS:
+                DoListMemoryRegions();
                 break;
             case IDM_ABOUT:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);

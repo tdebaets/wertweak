@@ -34,6 +34,7 @@
 #include <ntstatus.h>
 #include <shlwapi.h>
 #include <strsafe.h>
+#include <ProcessSnapshot.h>
 
 // C RunTime Header Files
 #include <stdlib.h>
@@ -45,6 +46,7 @@
 #include <AtlBase.h>
 #include <atlconv.h>
 
+#include <map>
 #include <sstream>
 
 using namespace std;

@@ -26,3 +26,4 @@
 #include <windows.h>
 #include <delayloadhandler.h>
 #include <WerApi.h>
+#include <ProcessSnapshot.h>

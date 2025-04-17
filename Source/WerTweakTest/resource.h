@@ -2,7 +2,7 @@
  *
  *            WerTweak
  *
- *            Copyright (c) 2020 Tim De Baets
+ *            Copyright (c) 2025 Tim De Baets
  *
  ****************************************************************************
  *
@@ -54,6 +54,9 @@
 #define IDM_REGISTER_APP_RESTART        32789
 #define IDM_HANG                        32790
 #define IDM_RUNWERFAULT                 32791
+#define IDM_PSSDUPLICATESNAPSHOT        32792
+#define IDM_LISTMEMREGIONS              32793
+#define IDM_PSSCAPTURESNAPSHOT          32794
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -62,7 +65,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        129
-#define _APS_NEXT_COMMAND_VALUE         32792
+#define _APS_NEXT_COMMAND_VALUE         32795
 #define _APS_NEXT_CONTROL_VALUE         1000
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

@@ -2,7 +2,7 @@
  *
  *            WerTweak
  *
- *            Copyright (c) 2020 Tim De Baets
+ *            Copyright (c) 2025 Tim De Baets
  *
  ****************************************************************************
  *
@@ -15,26 +15,13 @@
  *
  ****************************************************************************
  *
- * Pre-compiled header file for the WerTweak test application
+ * Main header file of the WerTweak injector application
  *
  ****************************************************************************/
 
 #pragma once
 
-#include "targetver.h"
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
-// Windows Header Files
-#include <windows.h>
-#include <strsafe.h>
-// C RunTime Header Files
-#include <stdlib.h>
-#include <malloc.h>
-#include <memory.h>
-#include <tchar.h>
-#include <winternl.h>
-#include <ProcessSnapshot.h>
-
-#include <set>
-#include <sstream>
-
-using namespace std;
+// The following define was copied from systeminformer/phnt/include/ntpsapi.h
+#define PSSNT_SIGNATURE_PSSD    'PSSD' // 0x50535344
+// Little-endian version of the previous define
+#define PSSNT_SIGNATURE_PSSD_LE 'DSSP' // 0x44535350

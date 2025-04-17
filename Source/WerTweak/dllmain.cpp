@@ -25,6 +25,7 @@
 #include "Processes.h"
 #include "ProjectUtils.h"
 #include "WERExportHook.h"
+#include "WERFaultHook.h"
 #include "WERHook.h"
 
 // TODO: remove topmost extended style from crash report dialogs?
@@ -64,6 +65,17 @@ void HandleProcessAttach(HMODULE hModule)
     {
         DbgOut("Running as a SYSTEM process, exiting");
         return;
+    }
+
+    try
+    {
+        CWERFaultHook werFaultHook(GetModuleHandle(NULL));
+
+        werFaultHook.HookWERFault();
+    }
+    catch (CPEModuleWalkerError & error)
+    {
+        DbgOut("Error walking WerFault.exe import modules: %s", error.what());
     }
 
     hmodWer = GetModuleHandleA(g_szWerDllName);

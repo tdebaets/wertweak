@@ -26,7 +26,7 @@ extern const LPCSTR g_szWerReportSubmitName;
 
 extern PVOID g_pPrevWerReportSubmit;
 
-HRESULT NewWerReportSubmit(HREPORT               hReportHandle,
-                           WER_CONSENT           consent,
-                           DWORD                 dwFlags,
-                           PWER_SUBMIT_RESULT    pSubmitResult);
+HRESULT WINAPI NewWerReportSubmit(HREPORT               hReportHandle,
+                                  WER_CONSENT           consent,
+                                  DWORD                 dwFlags,
+                                  PWER_SUBMIT_RESULT    pSubmitResult);

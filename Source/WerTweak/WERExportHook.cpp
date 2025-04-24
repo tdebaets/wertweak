@@ -39,10 +39,10 @@ typedef HRESULT (WINAPI *PWER_REPORT_SUBMIT) (HREPORT               hReportHandl
                                               DWORD                 dwFlags,
                                               PWER_SUBMIT_RESULT    pSubmitResult);
 
-HRESULT NewWerReportSubmit(HREPORT               hReportHandle,
-                           WER_CONSENT           consent,
-                           DWORD                 dwFlags,
-                           PWER_SUBMIT_RESULT    pSubmitResult)
+HRESULT WINAPI NewWerReportSubmit(HREPORT               hReportHandle,
+                                  WER_CONSENT           consent,
+                                  DWORD                 dwFlags,
+                                  PWER_SUBMIT_RESULT    pSubmitResult)
 {
     // TODO: remove?
     DbgOut("WerReportSubmit dwFlags==%x", dwFlags);

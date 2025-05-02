@@ -43,8 +43,6 @@ if errorlevel 1 goto failed
 
 :msbuild
 
-if "%MSBUILD_BIN_PATH%"=="" goto next
-
 set SOLUTIONFILE=WerTweak.sln
 
 call ..\common\Scripts\msbuild.bat %SOLUTIONFILE% Debug x86
@@ -59,13 +57,17 @@ if errorlevel 1 goto failed
 call ..\common\Scripts\msbuild.bat %SOLUTIONFILE% Release x64
 if errorlevel 1 goto failed
 
-:next
-
+echo:
 echo Success!
 cd ..
 goto exit
 
 :failed
+
+echo *** FAILED ***
+cd ..
+
+:failed2
 
 exit /b 1
 

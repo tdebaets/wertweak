@@ -27,9 +27,9 @@
 #include "..\WerTweak\ProjectUtils.h"
 #include "WerTweakInject.h"
 
-// TODO: add compile script
+// TODO: fix 0xc0000008 crash on hung 64-bit process on Win11 insider preview
+// TODO: retest on 32-bit OS
 // TODO: fix release mode WerTweak64.exe crashing on process close when handling hang/crash (only on Win10?)
-// TODO: fix WerFault.exe crashing with access violation (0xc0000005) when handling a Wow64 crash on Win11
 // TODO: retest with crash handling
 // TODO: test on Win11 insider preview
 // TODO: add memleak checks
@@ -79,12 +79,22 @@ typedef struct tProcInfo
     WOW64_CONTEXT               origThreadWow64Context; // used when bIsNative == false
     PVOID                       pStubInTarget;
     PVOID                       pStubInTargetBP;
+    PVOID                       pInjectedDllBaseInTarget;
 } tProcInfo;
 
-tProcInfo   g_procInfo              = {};
-FARPROC     g_pNativeLoadLibraryW   = NULL;
-FARPROC     g_pWow64LoadLibraryW    = NULL;
-bool        g_bIs64BitWindows       = false;
+typedef struct tInjectDllInfo
+{
+    wstring                     strFilename;
+    DWORD                       dwTranslateHpssSectionRva;
+    DWORD                       dwTranslateHpssSectionSize;
+} tInjectDllInfo;
+
+tProcInfo       g_procInfo              = {};
+tInjectDllInfo  g_injectDllInfo32       = {};
+tInjectDllInfo  g_injectDllInfo64       = {};
+FARPROC         g_pNativeLoadLibraryW   = NULL;
+FARPROC         g_pWow64LoadLibraryW    = NULL;
+bool            g_bIs64BitWindows       = false;
 
 /*
  * Mapping of process snapshot handles in the context of this process to snapshot handles in the
@@ -205,12 +215,6 @@ bool InitLoadLibraryStub64(tLoadLibraryStub64  *pStub,              /* OUT */
     return true;
 }
 
-static const LPCWSTR g_pszWerTweakDllName32 = L"WerTweak.dll";
-static const LPCWSTR g_pszWerTweakDllName64 = L"WerTweak64.dll";
-
-wstring g_strDllNameToInject32;
-wstring g_strDllNameToInject64;
-
 bool GetDllPathToInject(LPCWSTR pszDllName, wstring &refDllPath)
 {
     wstring         exeFileName = GetModuleName(NULL);
@@ -227,6 +231,87 @@ bool GetDllPathToInject(LPCWSTR pszDllName, wstring &refDllPath)
     DbgOut("DLL filename: %s", refDllPath.c_str());
 
     return PathFileExists(refDllPath.c_str());
+}
+
+bool RetrieveInjectDllInfo(LPCWSTR pszDllName, tInjectDllInfo *pInfo /* OUT */)
+{
+    bool                    bResult         = false;
+    HANDLE                  hFile;
+    HANDLE                  hFileMapping;
+    PVOID                   pBaseAddress    = NULL;
+    PIMAGE_NT_HEADERS       pNtHeaders      = NULL;
+    PIMAGE_SECTION_HEADER   pSectionHeaders = NULL;
+
+    if (!GetDllPathToInject(pszDllName, pInfo->strFilename))
+    {
+        DbgOut("Failed to find %s", pszDllName);
+        return false;
+    }
+
+    hFile = CreateFile(pInfo->strFilename.c_str(),
+                       GENERIC_READ,
+                       FILE_SHARE_READ,
+                       NULL,
+                       OPEN_EXISTING,
+                       0,
+                       NULL);
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        DbgOut("Failed to open file (%u)", GetLastError());
+        goto exit;
+    }
+
+    hFileMapping = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
+    if (!hFileMapping)
+    {
+        DbgOut("CreateFileMapping() failed (%u)", GetLastError());
+        goto exit;
+    }
+
+    pBaseAddress = MapViewOfFile(hFileMapping, FILE_MAP_READ, 0, 0, 0);
+    if (!pBaseAddress)
+    {
+        DbgOut("MapViewOfFile() failed (%u)", GetLastError());
+        goto exit;
+    }
+
+    pNtHeaders = ImageNtHeader(pBaseAddress);
+    if (!pNtHeaders)
+    {
+        DbgOut("ImageNtHeader() failed (%u)", GetLastError());
+        goto exit;
+    }
+
+    pSectionHeaders = IMAGE_FIRST_SECTION(pNtHeaders);
+    for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++)
+    {
+        if (_strnicmp((const char *)pSectionHeaders[i].Name,
+                      TRANSLATE_HPSS_SEGMENT_NAME,
+                      ARRAYSIZE(pSectionHeaders[i].Name)) == 0)
+        {
+            DbgOut("Translate HPSS Section RVA: 0x%x, Size: 0x%x",
+                   pSectionHeaders[i].VirtualAddress,
+                   pSectionHeaders[i].SizeOfRawData);
+
+            pInfo->dwTranslateHpssSectionRva    = pSectionHeaders[i].VirtualAddress;
+            pInfo->dwTranslateHpssSectionSize   = pSectionHeaders[i].SizeOfRawData;
+
+            bResult = true;
+        }
+    }
+
+exit:
+
+    if (pBaseAddress)
+    {
+        UnmapViewOfFile(pBaseAddress);
+        pBaseAddress = NULL;
+    }
+
+    CloseHandleSafe(&hFileMapping);
+    CloseHandleSafe(&hFile);
+
+    return bResult;
 }
 
 bool GetNativeLoadLibraryAddress()
@@ -376,12 +461,29 @@ bool SaveEntryPointContext(tProcInfo *pProcInfo)
     return true;
 }
 
-bool RestoreEntryPointContext(tProcInfo *pProcInfo)
+bool SaveBaseAddressAndRestoreEntryPointContext(tProcInfo *pProcInfo)
 {
-    // Set the registers back to what they were before we redirected them to the LoadLibrary stub
+    /*
+     * Save the base address of the injected DLL by reading the return value of the LoadLibrary()
+     * call from EAX/RAX and set the registers back to what they were before we redirected them to
+     * the LoadLibrary stub.
+     */
 
     if (pProcInfo->bIsNative)
     {
+        CONTEXT context = {};
+
+        context.ContextFlags = CONTEXT_FULL;
+
+        if (GetThreadContext(pProcInfo->createInfo.hThread, &context))
+        {
+            pProcInfo->pInjectedDllBaseInTarget = (PVOID)CONTEXT_AX(&context);
+        }
+        else
+        {
+            DbgOut("GetThreadContext failed (%u)", GetLastError());
+        }
+
         if (!SetThreadContext(pProcInfo->createInfo.hThread,
                               &pProcInfo->origThreadContext))
         {
@@ -391,6 +493,19 @@ bool RestoreEntryPointContext(tProcInfo *pProcInfo)
     }
     else
     {
+        WOW64_CONTEXT context = {};
+
+        context.ContextFlags = CONTEXT_FULL;
+
+        if (Wow64GetThreadContext(pProcInfo->createInfo.hThread, &context))
+        {
+            pProcInfo->pInjectedDllBaseInTarget = (PVOID)(UINT_PTR)context.Eax;
+        }
+        else
+        {
+            DbgOut("GetThreadContext failed (%u)", GetLastError());
+        }
+
         if (!Wow64SetThreadContext(pProcInfo->createInfo.hThread,
                                    &pProcInfo->origThreadWow64Context))
         {
@@ -398,6 +513,8 @@ bool RestoreEntryPointContext(tProcInfo *pProcInfo)
             return false;
         }
     }
+
+    DbgOut("Base address of injected DLL: 0x%p", pProcInfo->pInjectedDllBaseInTarget);
 
     return true;
 }
@@ -442,7 +559,7 @@ bool InjectCode(tProcInfo *pProcInfo)
     {
         if (!InitLoadLibraryStub32(&stub32,
                                    pStubInTarget,
-                                   g_strDllNameToInject32.c_str(),
+                                   g_injectDllInfo32.strFilename.c_str(),
                                    pProcInfo->bIsNative ? g_pNativeLoadLibraryW :
                                                           g_pWow64LoadLibraryW,
                                    &pStubInTargetBP))
@@ -455,7 +572,7 @@ bool InjectCode(tProcInfo *pProcInfo)
     {
         if (!InitLoadLibraryStub64(&stub64,
                                    pStubInTarget,
-                                   g_strDllNameToInject64.c_str(),
+                                   g_injectDllInfo64.strFilename.c_str(),
                                    g_pNativeLoadLibraryW,
                                    &pStubInTargetBP))
         {
@@ -649,6 +766,8 @@ void OnProcessExit(DEBUG_EVENT* pEvt)
 
 void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
 {
+    tInjectDllInfo *pInjectDllInfo = pProcInfo->bIs32Bit ? &g_injectDllInfo32 : &g_injectDllInfo64;
+
     // We're only interested in breakpoint exceptions, but need to be careful which type to handle
     // depending on native/non-native bitness
     if (pProcInfo->bIsNative)
@@ -662,14 +781,7 @@ void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
             return;
     }
 
-    if (pProcInfo->bInjected)
-    {
-        // TODO: check exception address
-        DbgOut("Breakpoint during regular execution");
-
-        HandleTranslateProcessSnapshotHandle(pProcInfo);
-    }
-    else
+    if (!pProcInfo->bInjected)
     {
         if (!pProcInfo->bFirstBPHit)
         {
@@ -712,9 +824,7 @@ void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
         {
             DbgOut("Stub breakpoint hit");
 
-            // TODO: log handle of the loaded DLL (EAX/RAX)?
-
-            if (!RestoreEntryPointContext(pProcInfo))
+            if (!SaveBaseAddressAndRestoreEntryPointContext(pProcInfo))
             {
                 DbgOut("Failed to restore entry point context");
             }
@@ -722,6 +832,30 @@ void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
             // TODO: free stub
 
             pProcInfo->bInjected = true;
+        }
+    }
+    else
+    {
+        DbgOut("Breakpoint during regular execution at address 0x%p",
+               pEvt->u.Exception.ExceptionRecord.ExceptionAddress);
+
+        if (pProcInfo->pInjectedDllBaseInTarget &&
+            pInjectDllInfo->dwTranslateHpssSectionRva &&
+            pInjectDllInfo->dwTranslateHpssSectionSize)
+        {
+            UINT_PTR uptrExceptionAddress           =
+                (UINT_PTR)pEvt->u.Exception.ExceptionRecord.ExceptionAddress;
+            UINT_PTR uptrTranslateHpssSectionStart  =
+                (UINT_PTR)pProcInfo->pInjectedDllBaseInTarget +
+                pInjectDllInfo->dwTranslateHpssSectionRva;
+            UINT_PTR uptrTranslateHpssSectionEnd    = uptrTranslateHpssSectionStart +
+                pInjectDllInfo->dwTranslateHpssSectionSize;
+
+            if (uptrExceptionAddress >= uptrTranslateHpssSectionStart &&
+                uptrExceptionAddress < uptrTranslateHpssSectionEnd)
+            {
+                HandleTranslateProcessSnapshotHandle(pProcInfo);
+            }
         }
     }
 }
@@ -945,16 +1079,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
         return 3;
     }
 
-    if (!GetDllPathToInject(g_pszWerTweakDllName32, g_strDllNameToInject32))
+    if (!RetrieveInjectDllInfo(g_pszWerTweakDllName32, &g_injectDllInfo32))
     {
-        DbgOut("Failed to find 32-bit DLL file to inject");
+        DbgOut("Failed to retrieve 32-bit inject DLL file info");
         return 4;
     }
 
 #if defined(_WIN64)
-    if (!GetDllPathToInject(g_pszWerTweakDllName64, g_strDllNameToInject64))
+    if (!RetrieveInjectDllInfo(g_pszWerTweakDllName64, &g_injectDllInfo64))
     {
-        DbgOut("Failed to find 64-bit DLL file to inject");
+        DbgOut("Failed to retrieve 64-bit inject DLL file info");
         return 5;
     }
 #endif

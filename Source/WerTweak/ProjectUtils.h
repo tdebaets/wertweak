@@ -21,8 +21,12 @@
 
 #pragma once
 
+// TODO: move and rename this file
+
 #include "Utils.h"
 
 #undef DbgOut
 #define DbgOut(kwszDebugFormatString, ...) \
     _DbgOut(L"WerTweak: " kwszDebugFormatString, __VA_ARGS__)
+
+#define TRANSLATE_HPSS_SEGMENT_NAME ".thpss"

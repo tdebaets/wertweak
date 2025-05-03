@@ -30,6 +30,7 @@
 #define WIN32_NO_STATUS
 #include <windows.h>
 #undef WIN32_NO_STATUS
+#include <DbgHelp.h>
 #include <intsafe.h>
 #include <ntstatus.h>
 #include <shlwapi.h>

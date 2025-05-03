@@ -31,11 +31,9 @@
 #define MAX_LOADSTRING 100
 
 #if _WIN64
-static const LPCWSTR g_wszWerTweakStubDllName   = L"WerTweakStub64.dll";
-static const LPCWSTR g_wszWerTweakDllName       = L"WerTweak64.dll";
+static const LPCWSTR g_wszWerTweakDllName       = g_pszWerTweakDllName64;
 #elif _WIN32
-static const LPCWSTR g_wszWerTweakStubDllName   = L"WerTweakStub.dll";
-static const LPCWSTR g_wszWerTweakDllName       = L"WerTweak.dll";
+static const LPCWSTR g_wszWerTweakDllName       = g_pszWerTweakDllName32;
 #endif
 
 // Report name shouldn't be too long or else WerReportCreate() will fail
@@ -149,14 +147,103 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
-void LoadWerTweakStub()
-{
-    LoadLibrary(g_wszWerTweakStubDllName);
-}
-
 void LoadWerTweak()
 {
     LoadLibrary(g_wszWerTweakDllName);
+}
+
+bool GetDllPathToInject(LPCWSTR pszDllName, wstring &refDllPath)
+{
+    wstring         exeFileName = GetModuleName(NULL);
+    wostringstream  oss;
+
+    PathRemoveFileSpec(&exeFileName[0]);
+    exeFileName.resize(lstrlenW(exeFileName.c_str()));
+
+    oss << exeFileName << L"\\" << pszDllName;
+
+    refDllPath = oss.str();
+
+    // TODO: remove
+    DbgOut("DLL filename: %s", refDllPath.c_str());
+
+    return PathFileExists(refDllPath.c_str());
+}
+
+void RetrieveInjectDllInfo(LPCWSTR pszDllName)
+{
+    wstring                 strDllPath;
+    HANDLE                  hFile;
+    HANDLE                  hFileMapping;
+    PVOID                   pBaseAddress    = NULL;
+    PIMAGE_NT_HEADERS       pNtHeaders      = NULL;
+    PIMAGE_SECTION_HEADER   pSectionHeaders = NULL;
+
+    if (!GetDllPathToInject(pszDllName, strDllPath))
+    {
+        DbgOut("Failed to find %s", pszDllName);
+        return;
+    }
+
+    hFile = CreateFile(strDllPath.c_str(),
+                       GENERIC_READ,
+                       FILE_SHARE_READ,
+                       NULL,
+                       OPEN_EXISTING,
+                       0,
+                       NULL);
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        DbgOut("Failed to open file (%u)", GetLastError());
+        goto exit;
+    }
+
+    hFileMapping = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
+    if (!hFileMapping)
+    {
+        DbgOut("CreateFileMapping() failed (%u)", GetLastError());
+        goto exit;
+    }
+
+    pBaseAddress = MapViewOfFile(hFileMapping, FILE_MAP_READ, 0, 0, 0);
+    if (!pBaseAddress)
+    {
+        DbgOut("MapViewOfFile() failed (%u)", GetLastError());
+        goto exit;
+    }
+
+    pNtHeaders = ImageNtHeader(pBaseAddress);
+    if (!pNtHeaders)
+    {
+        DbgOut("ImageNtHeader() failed (%u)", GetLastError());
+        goto exit;
+    }
+
+    pSectionHeaders = IMAGE_FIRST_SECTION(pNtHeaders);
+
+    for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++)
+    {
+        DbgOut("Section: %hs", pSectionHeaders[i].Name);
+    }
+
+exit:
+
+    if (pBaseAddress)
+    {
+        UnmapViewOfFile(pBaseAddress);
+        pBaseAddress = NULL;
+    }
+
+    CloseHandleSafe(&hFileMapping);
+    CloseHandleSafe(&hFile);
+}
+
+void DoRetrieveInjectDllInfo()
+{
+#if _WIN64
+    RetrieveInjectDllInfo(g_pszWerTweakDllName64);
+#endif
+    RetrieveInjectDllInfo(g_pszWerTweakDllName32);
 }
 
 void DoWerReportSubmit(HWND hWnd)
@@ -482,11 +569,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             // Parse the menu selections:
             switch (wmId)
             {
-            case IDM_LOAD_STUB_DLL:
-                LoadWerTweakStub();
-                break;
             case IDM_LOAD_DLL:
                 LoadWerTweak();
+                break;
+            case IDM_RETRIEVE_INJECT_DLL_INFO:
+                DoRetrieveInjectDllInfo();
                 break;
             case IDM_WER_REPORT_SUBMIT:
                 DoWerReportSubmit(hWnd);

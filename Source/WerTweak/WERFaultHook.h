@@ -22,10 +22,19 @@
 #pragma once
 
 #include "PEModuleWalker.h"
+#include "ProjectUtils.h"
 
 extern const LPCSTR g_szProcessSnapshotApiSetName;
 
-extern HPSS TranslateSnapshotHandleByDebugger(HPSS SnapshotHandle);
+/*
+ * To allow WerTweakInject to detect the debug breakpoint in TranslateSnapshotHandleByDebugger(),
+ * we put this function in a separate, dedicated PE section. Note that just specifying 'code_seg'
+ * has no effect when compiling in a release configuration since then the function is being inlined,
+ * so we must also specify 'noinline'.
+ */
+#define TRANSLATE_HPSS_FUNC __declspec(noinline code_seg(TRANSLATE_HPSS_SEGMENT_NAME))
+
+extern TRANSLATE_HPSS_FUNC HPSS TranslateSnapshotHandleByDebugger(HPSS SnapshotHandle);
 
 class CWERFaultHook : public CPEModuleWalker
 {

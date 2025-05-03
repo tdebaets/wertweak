@@ -25,3 +25,6 @@
 #define PSSNT_SIGNATURE_PSSD    'PSSD' // 0x50535344
 // Little-endian version of the previous define
 #define PSSNT_SIGNATURE_PSSD_LE 'DSSP' // 0x44535350
+
+static const LPCWSTR g_pszWerTweakDllName32 = L"WerTweak.dll";
+static const LPCWSTR g_pszWerTweakDllName64 = L"WerTweak64.dll";

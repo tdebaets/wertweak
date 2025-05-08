@@ -23,6 +23,7 @@
 
 extern const LPCSTR g_szWerDllName;
 extern const LPCSTR g_szWerReportSubmitName;
+extern const LPCSTR g_szWerpTraceSnapshotStatisticsName;
 
 extern PVOID g_pPrevWerReportSubmit;
 
@@ -30,3 +31,9 @@ HRESULT WINAPI NewWerReportSubmit(HREPORT               hReportHandle,
                                   WER_CONSENT           consent,
                                   DWORD                 dwFlags,
                                   PWER_SUBMIT_RESULT    pSubmitResult);
+
+extern PVOID g_pPrevWerpTraceSnapshotStatistics;
+
+DWORD64 WINAPI NewWerpTraceSnapshotStatistics(LPVOID    pUnknown1,
+                                              LPVOID    pUnknown2,
+                                              HPSS      SnapshotHandle);

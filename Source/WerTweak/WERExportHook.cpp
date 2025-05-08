@@ -23,14 +23,16 @@
 
 #include "ProjectUtils.h"
 #include "WERExportHook.h"
+#include "WERFaultHook.h"
 
 // Undocumented flag for WerReportSubmit
 // TODO: research if not known anywhere
 #define WER_SUBMIT_PROCESS_IS_IMMERSIVE_BROKER  0x00080000 // PROCESS_UICONTEXT_IMMERSIVE_BROKER
 #define WER_SUBMIT_PROCESS_IS_IMMERSIVE         0x00100000 // PROCESS_UICONTEXT_IMMERSIVE
 
-static const LPCSTR g_szWerDllName          = "wer.dll";
-static const LPCSTR g_szWerReportSubmitName = "WerReportSubmit";
+static const LPCSTR g_szWerDllName                      = "wer.dll";
+static const LPCSTR g_szWerReportSubmitName             = "WerReportSubmit";
+static const LPCSTR g_szWerpTraceSnapshotStatisticsName = "WerpTraceSnapshotStatistics";
 
 PVOID g_pPrevWerReportSubmit = NULL;
 
@@ -79,4 +81,27 @@ HRESULT WINAPI NewWerReportSubmit(HREPORT               hReportHandle,
                                                         consent,
                                                         dwFlags,
                                                         pSubmitResult);
+}
+
+PVOID g_pPrevWerpTraceSnapshotStatistics = NULL;
+
+// TODO: improve result type and param types?
+typedef DWORD64 (WINAPI *PWERP_TRACE_SNAPSHOT_STATS) (LPVOID    pUnknown1,
+                                                      LPVOID    pUnknown2,
+                                                      HPSS      SnapshotHandle);
+
+DWORD64 WINAPI NewWerpTraceSnapshotStatistics(LPVOID    pUnknown1,
+                                              LPVOID    pUnknown2,
+                                              HPSS      SnapshotHandle)
+{
+    // TODO remove
+    DbgOut("NewWerpTraceSnapshotStatistics(%p, %p, %p)", pUnknown1, pUnknown2, SnapshotHandle);
+
+    SnapshotHandle = TranslateSnapshotHandleByDebugger(SnapshotHandle);
+
+    DbgOut("  handle after translation: 0x%p", SnapshotHandle);
+
+    return ((PWERP_TRACE_SNAPSHOT_STATS)g_pPrevWerpTraceSnapshotStatistics)(pUnknown1,
+                                                                            pUnknown2,
+                                                                            SnapshotHandle);
 }

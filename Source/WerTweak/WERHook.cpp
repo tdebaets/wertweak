@@ -30,16 +30,7 @@
 #include "WERUIHook.h"
 #include "WERUIExportHook.h"
 
-static const LPCSTR g_szPssDuplicateSnapshotName = "PssDuplicateSnapshot";
-
-typedef DWORD (WINAPI *PPSS_DUPLICATE_SNAPSHOT) (HANDLE                 SourceProcessHandle,
-                                                 HPSS                   SnapshotHandle,
-                                                 HANDLE                 TargetProcessHandle,
-                                                 HPSS                  *TargetSnapshotHandle,
-                                                 PSS_DUPLICATE_FLAGS    Flags);
-
-PVOID                       g_pPrevPssDuplicateSnapshot     = NULL;
-PRESOLVE_DELAY_LOADED_API   g_pPrevWERResolveDelayLoadedAPI = NULL;
+PRESOLVE_DELAY_LOADED_API g_pPrevWERResolveDelayLoadedAPI = NULL;
 
 void WERTryHookDelayLoadImport(PVOID               ParentModuleBase,
                                PIMAGE_THUNK_DATA   ThunkAddress,
@@ -150,25 +141,52 @@ PVOID WINAPI WERNewResolveDelayLoadedAPI(PVOID                             Paren
     return pImportAddress;
 }
 
-DWORD WINAPI NewPssDuplicateSnapshot(HANDLE                 SourceProcessHandle,
-                                     HPSS                   SnapshotHandle,
-                                     HANDLE                 TargetProcessHandle,
-                                     HPSS                  *TargetSnapshotHandle,
-                                     PSS_DUPLICATE_FLAGS    Flags)
+PVOID g_pPrevWERPssQuerySnapshot = NULL;
+
+DWORD WINAPI NewWERPssQuerySnapshot(HPSS                           SnapshotHandle,
+                                    PSS_QUERY_INFORMATION_CLASS    InformationClass,
+                                    void                          *Buffer,
+                                    DWORD                          BufferLength)
 {
     DWORD dwResult;
 
-    DbgOut("PssDuplicateSnapshot(0x%p)", SnapshotHandle);
+    DbgOut("WER PssQuerySnapshot(0x%p)", SnapshotHandle);
 
     SnapshotHandle = TranslateSnapshotHandleByDebugger(SnapshotHandle);
 
     DbgOut("  handle after translation: 0x%p", SnapshotHandle);
 
-    dwResult = ((PPSS_DUPLICATE_SNAPSHOT)g_pPrevPssDuplicateSnapshot)(SourceProcessHandle,
-                                                                      SnapshotHandle,
-                                                                      TargetProcessHandle,
-                                                                      TargetSnapshotHandle,
-                                                                      Flags);
+    dwResult = ((PPSS_QUERY_SNAPSHOT)g_pPrevWERPssQuerySnapshot)(SnapshotHandle,
+                                                                 InformationClass,
+                                                                 Buffer,
+                                                                 BufferLength);
+
+    DbgOut("  result=%u", dwResult);
+
+    return dwResult;
+}
+
+PVOID g_pPrevWERPssDuplicateSnapshot = NULL;
+
+DWORD WINAPI NewWERPssDuplicateSnapshot(HANDLE                 SourceProcessHandle,
+                                        HPSS                   SnapshotHandle,
+                                        HANDLE                 TargetProcessHandle,
+                                        HPSS                  *TargetSnapshotHandle,
+                                        PSS_DUPLICATE_FLAGS    Flags)
+{
+    DWORD dwResult;
+
+    DbgOut("WER PssDuplicateSnapshot(0x%p)", SnapshotHandle);
+
+    SnapshotHandle = TranslateSnapshotHandleByDebugger(SnapshotHandle);
+
+    DbgOut("  handle after translation: 0x%p", SnapshotHandle);
+
+    dwResult = ((PPSS_DUPLICATE_SNAPSHOT)g_pPrevWERPssDuplicateSnapshot)(SourceProcessHandle,
+                                                                         SnapshotHandle,
+                                                                         TargetProcessHandle,
+                                                                         TargetSnapshotHandle,
+                                                                         Flags);
 
     DbgOut("  result=%u", dwResult);
 
@@ -205,10 +223,15 @@ void CWERHook::PatchImportedModule(PIMAGE_THUNK_DATA pOrigFirstThunk,
                         WERNewResolveDelayLoadedAPI,
                         (PVOID *)&g_pPrevWERResolveDelayLoadedAPI);
         }
+        else if (lstrcmpA(importName, g_szPssQuerySnapshotName) == 0)
+        {
+            // TODO: add error checking
+            PatchImport(pThunk, NewWERPssQuerySnapshot, (PVOID *)&g_pPrevWERPssQuerySnapshot);
+        }
         else if (lstrcmpA(importName, g_szPssDuplicateSnapshotName) == 0)
         {
             // TODO: add error checking
-            PatchImport(pThunk, NewPssDuplicateSnapshot, (PVOID *)&g_pPrevPssDuplicateSnapshot);
+            PatchImport(pThunk, NewWERPssDuplicateSnapshot, (PVOID *)&g_pPrevWERPssDuplicateSnapshot);
         }
 
 next:

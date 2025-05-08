@@ -24,16 +24,15 @@
 #include <DelayLoadUtils.h>
 
 #include "PEUtils.h"
+#include "WERExportHook.h"
 #include "WERFaultHook.h"
 
-static const LPCSTR g_szProcessSnapshotApiSetName = "api-ms-win-core-processsnapshot-l1-1-0.dll";
+// TODO: move to WERHook/ProcessSnapshotHook?
+static const LPCSTR g_szProcessSnapshotApiSetName       = "api-ms-win-core-processsnapshot-l1-1-0.dll";
 
-static const LPCSTR g_szPssQuerySnapshotName = "PssQuerySnapshot";
+static const LPCSTR g_szPssQuerySnapshotName            = "PssQuerySnapshot";
+static const LPCSTR g_szPssDuplicateSnapshotName        = "PssDuplicateSnapshot";
 
-typedef DWORD (WINAPI *PPSS_QUERY_SNAPSHOT) (HPSS                           SnapshotHandle,
-                                             PSS_QUERY_INFORMATION_CLASS    InformationClass,
-                                             void                          *Buffer,
-                                             DWORD                          BufferLength);
 /*
  * Dummy function (that must never be inlined) that just returns the given process snapshot handle
  * pointer, so that this pointer is in EAX/RAX and the snapshot handle can be read/modified by the
@@ -131,6 +130,13 @@ void CWERFaultHook::PatchImportedModule(PIMAGE_THUNK_DATA pOrigFirstThunk,
             // TODO: add error checking
             PatchImport(pThunk, NewPssQuerySnapshot, (PVOID *)&g_pPrevPssQuerySnapshot);
         }
+        else if (lstrcmpA(importName, g_szWerpTraceSnapshotStatisticsName) == 0)
+        {
+            // TODO: add error checking
+            PatchImport(pThunk,
+                        NewWerpTraceSnapshotStatistics,
+                        (PVOID *)&g_pPrevWerpTraceSnapshotStatistics);
+        }
 
 next:
 
@@ -145,7 +151,8 @@ bool CWERFaultHook::ImportModuleProc(PIMAGE_IMPORT_DESCRIPTOR  pImpDesc,
     PIMAGE_THUNK_DATA pOrigFirstThunk   = NULL;
     PIMAGE_THUNK_DATA pFirstThunk       = NULL;
 
-    if (lstrcmpiA(name, g_szProcessSnapshotApiSetName) == 0)
+    if (lstrcmpiA(name, g_szProcessSnapshotApiSetName) == 0 ||
+        lstrcmpiA(name, g_szWerDllName) == 0)
     {
         pOrigFirstThunk = (PIMAGE_THUNK_DATA)RVAToAbsolute(pImpDesc->OriginalFirstThunk);
         pFirstThunk     = (PIMAGE_THUNK_DATA)RVAToAbsolute(pImpDesc->FirstThunk);

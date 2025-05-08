@@ -27,7 +27,7 @@
 #include "..\WerTweak\ProjectUtils.h"
 #include "WerTweakInject.h"
 
-// TODO: fix 0xc0000008 crash on hung 64-bit process on Win11 insider preview
+// TODO: use DWORD_PTR instead of UINT_PTR
 // TODO: retest on 32-bit OS
 // TODO: fix release mode WerTweak64.exe crashing on process close when handling hang/crash (only on Win10?)
 // TODO: retest with crash handling

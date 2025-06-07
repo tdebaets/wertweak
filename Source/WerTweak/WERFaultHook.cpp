@@ -35,7 +35,7 @@ static const LPCSTR g_szPssDuplicateSnapshotName    = "PssDuplicateSnapshot";
 static const LPCSTR g_szPssWalkSnapshotName         = "PssWalkSnapshot";
 
 // TODO: make sure that native/non-native x86 debuggee still works
-TRANSLATE_HPSS_FUNC HPSS TranslateSnapshotHandleByDebugger(HPSS hSnapshot)
+TRANSLATE_HPSS_FUNC HPSS TranslateSnapshotHandleByDebugger(HPSS hSnapshot, DWORD dwFlags)
 {
     HPSS               *phSnapshot      = &hSnapshot;
     EXCEPTION_RECORD    exceptionRecord = {};
@@ -46,15 +46,19 @@ TRANSLATE_HPSS_FUNC HPSS TranslateSnapshotHandleByDebugger(HPSS hSnapshot)
      */
     if (IsDebuggerPresent())
     {
-        exceptionRecord.ExceptionCode           = STATUS_TRANSLATE_PROCESS_SNAPSHOT_HANDLE;
-        exceptionRecord.ExceptionFlags          = 0; /* continuable exception */
-        exceptionRecord.NumberParameters        = 1; // TODO: cleanup
+        exceptionRecord.ExceptionCode       = STATUS_TRANSLATE_PROCESS_SNAPSHOT_HANDLE;
+        exceptionRecord.ExceptionFlags      = 0; /* continuable exception */
+        exceptionRecord.NumberParameters    = STATUS_TRANSLATE_PROCESS_SNAPSHOT_HANDLE_PARAM_MAX_PLUS1;
 
         /*
          * We must pass the snapshot handle by reference here to allow the debugger (i.e.
          * WerTweakInject) to modify its value.
          */
-        exceptionRecord.ExceptionInformation[0] = (ULONG_PTR)phSnapshot;
+        exceptionRecord.ExceptionInformation[STATUS_TRANSLATE_PROCESS_SNAPSHOT_HANDLE_PARAM_PHANDLE]
+                = (ULONG_PTR)phSnapshot;
+
+        exceptionRecord.ExceptionInformation[STATUS_TRANSLATE_PROCESS_SNAPSHOT_HANDLE_PARAM_FLAGS]
+                = dwFlags;
 
         /*
          * Trigger an exception by calling RtlRaiseException(). Note that the address of this
@@ -79,7 +83,7 @@ DWORD WINAPI NewPssQuerySnapshot(HPSS                           SnapshotHandle,
 
     DbgOut("PssQuerySnapshot(0x%p)", SnapshotHandle);
 
-    SnapshotHandle = TranslateSnapshotHandleByDebugger(SnapshotHandle);
+    SnapshotHandle = TranslateSnapshotHandleByDebugger(SnapshotHandle, 0);
 
     DbgOut("  handle after translation: 0x%p", SnapshotHandle);
 

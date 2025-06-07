@@ -54,7 +54,8 @@ typedef DWORD (WINAPI *PPSS_WALK_SNAPSHOT) (HPSS                         Snapsho
  */
 #define TRANSLATE_HPSS_FUNC __declspec(noinline code_seg(TRANSLATE_HPSS_SEGMENT_NAME))
 
-extern TRANSLATE_HPSS_FUNC HPSS TranslateSnapshotHandleByDebugger(HPSS SnapshotHandle);
+extern TRANSLATE_HPSS_FUNC HPSS TranslateSnapshotHandleByDebugger(HPSS  SnapshotHandle,
+                                                                  DWORD dwFlags);
 
 class CWERFaultHook : public CPEModuleWalker
 {

@@ -30,6 +30,13 @@
 #include "WERUIHook.h"
 #include "WERUIExportHook.h"
 
+/*
+ * Some of the DbgOut() calls below (e.g. in NewWERPssWalkSnapshot) occur in WerFault's hot code
+ * paths and introduce too much delay in its execution. These are compiled out by default, but can
+ * be included again by uncommenting this define.
+ */
+//#define COMPILE_DBGOUT_CALLS_IN_HOT_PATHS
+
 PRESOLVE_DELAY_LOADED_API g_pPrevWERResolveDelayLoadedAPI = NULL;
 
 void WERTryHookDelayLoadImport(PVOID               ParentModuleBase,
@@ -152,7 +159,7 @@ DWORD WINAPI NewWERPssQuerySnapshot(HPSS                           SnapshotHandl
 
     DbgOut("WER PssQuerySnapshot(0x%p)", SnapshotHandle);
 
-    SnapshotHandle = TranslateSnapshotHandleByDebugger(SnapshotHandle);
+    SnapshotHandle = TranslateSnapshotHandleByDebugger(SnapshotHandle, 0);
 
     DbgOut("  handle after translation: 0x%p", SnapshotHandle);
 
@@ -178,7 +185,7 @@ DWORD WINAPI NewWERPssDuplicateSnapshot(HANDLE                 SourceProcessHand
 
     DbgOut("WER PssDuplicateSnapshot(0x%p)", SnapshotHandle);
 
-    SnapshotHandle = TranslateSnapshotHandleByDebugger(SnapshotHandle);
+    SnapshotHandle = TranslateSnapshotHandleByDebugger(SnapshotHandle, 0);
 
     DbgOut("  handle after translation: 0x%p", SnapshotHandle);
 
@@ -203,11 +210,24 @@ DWORD WINAPI NewWERPssWalkSnapshot(HPSS                         SnapshotHandle,
 {
     DWORD dwResult;
 
+#if defined(COMPILE_DBGOUT_CALLS_IN_HOT_PATHS)
     DbgOut("WER PssWalkSnapshot(0x%p, %u)", SnapshotHandle, InformationClass);
+#endif
 
-    SnapshotHandle = TranslateSnapshotHandleByDebugger(SnapshotHandle);
+    /*
+     * Note: PssWalkSnapshot() gets called a *lot* (several thousands of times) by WerFault. The
+     * DbgOut() calls in WerTweakInject.cpp that are triggered by process snapshot handle
+     * translation introduce too much delay to allow WerFault to complete in a reasonable amount of
+     * time. So we pass the TRANSLATE_PROCESS_SNAPSHOT_HANDLE_FLAG_SUPPRESS_DBG_OUTPUT flag that
+     * suppresses these calls.
+     */
+    SnapshotHandle = TranslateSnapshotHandleByDebugger(
+            SnapshotHandle,
+            TRANSLATE_PROCESS_SNAPSHOT_HANDLE_FLAG_SUPPRESS_DBG_OUTPUT);
 
+#if defined(COMPILE_DBGOUT_CALLS_IN_HOT_PATHS)
     DbgOut("  handle after translation: 0x%p", SnapshotHandle);
+#endif
 
     dwResult = ((PPSS_WALK_SNAPSHOT)g_pPrevWERPssWalkSnapshot)(SnapshotHandle,
                                                                InformationClass,
@@ -215,7 +235,9 @@ DWORD WINAPI NewWERPssWalkSnapshot(HPSS                         SnapshotHandle,
                                                                Buffer,
                                                                BufferLength);
 
+#if defined(COMPILE_DBGOUT_CALLS_IN_HOT_PATHS)
     DbgOut("  result=%u", dwResult);
+#endif
 
     return dwResult;
 }

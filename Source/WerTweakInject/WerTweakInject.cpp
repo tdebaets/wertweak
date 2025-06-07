@@ -637,11 +637,34 @@ exit:
     return bResult;
 }
 
+/*
+ * Returns true if DbgOut() calls should be suppressed in order not to delay WerFault's execution
+ * too much in hot code paths.
+ */
+bool ShouldSuppressDbgOutputOnException(PEXCEPTION_RECORD pExceptionRecord)
+{
+    if (pExceptionRecord->ExceptionCode == STATUS_TRANSLATE_PROCESS_SNAPSHOT_HANDLE &&
+        pExceptionRecord->NumberParameters ==
+            STATUS_TRANSLATE_PROCESS_SNAPSHOT_HANDLE_PARAM_MAX_PLUS1)
+    {
+        ULONG_PTR dwFlags =
+            pExceptionRecord->ExceptionInformation[STATUS_TRANSLATE_PROCESS_SNAPSHOT_HANDLE_PARAM_FLAGS];
+
+        return ((dwFlags & TRANSLATE_PROCESS_SNAPSHOT_HANDLE_FLAG_SUPPRESS_DBG_OUTPUT) != 0);
+    }
+    else
+    {
+        return false;
+    }
+}
+
 bool HandleTranslateProcessSnapshotHandle(tProcInfo *pProcInfo, PEXCEPTION_RECORD pExceptionRecord)
 {
-    PVOID   pSnapshotHandle = NULL;
-    HPSS    hSnapshot       = NULL;
-    HPSS    hTargetSnapshot = NULL;
+    bool        bSuppressDbgOutput  = ShouldSuppressDbgOutputOnException(pExceptionRecord);
+    ULONG_PTR  *pulpParams          = pExceptionRecord->ExceptionInformation;
+    PVOID       pSnapshotHandle     = NULL;
+    HPSS        hSnapshot           = NULL;
+    HPSS        hTargetSnapshot     = NULL;
 
     /*
      * When being launched for a 32-bit process, WerFault doesn't appear to require any translation
@@ -658,16 +681,19 @@ bool HandleTranslateProcessSnapshotHandle(tProcInfo *pProcInfo, PEXCEPTION_RECOR
         return true;
     }
 
-    if (pExceptionRecord->NumberParameters != 1)
+    if (pExceptionRecord->NumberParameters !=
+            STATUS_TRANSLATE_PROCESS_SNAPSHOT_HANDLE_PARAM_MAX_PLUS1)
     {
         DbgOut("Unexpected number of exception parameters: %u", pExceptionRecord->NumberParameters);
         return false;
     }
 
-    // TODO: cleanup
-    pSnapshotHandle = (PVOID)pExceptionRecord->ExceptionInformation[0];
+    pSnapshotHandle = (PVOID)pulpParams[STATUS_TRANSLATE_PROCESS_SNAPSHOT_HANDLE_PARAM_PHANDLE];
 
-    DbgOut("Snapshot handle address: %p", pSnapshotHandle);
+    if (!bSuppressDbgOutput)
+    {
+        DbgOut("Snapshot handle address: %p", pSnapshotHandle);
+    }
 
     if (!pSnapshotHandle)
         return false;
@@ -689,7 +715,10 @@ bool HandleTranslateProcessSnapshotHandle(tProcInfo *pProcInfo, PEXCEPTION_RECOR
 
     hTargetSnapshot = iter->second;
 
-    DbgOut("Snapshot handle: 0x%p -> 0x%p", hSnapshot, hTargetSnapshot);
+    if (!bSuppressDbgOutput)
+    {
+        DbgOut("Snapshot handle: 0x%p -> 0x%p", hSnapshot, hTargetSnapshot);
+    }
 
     if (!WriteTargetMemory(pProcInfo->createInfo.hProcess,
                            pSnapshotHandle,
@@ -827,7 +856,10 @@ void OnProcessBreakpoint(tProcInfo* pProcInfo, DEBUG_EVENT* pEvt)
 
 void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt, bool *pbExceptionHandled)
 {
-    tInjectDllInfo *pInjectDllInfo = pProcInfo->bIs32Bit ? &g_injectDllInfo32 : &g_injectDllInfo64;
+    bool            bSuppressDbgOutput;
+    tInjectDllInfo *pInjectDllInfo      = pProcInfo->bIs32Bit ? &g_injectDllInfo32 : &g_injectDllInfo64;
+
+    bSuppressDbgOutput  = ShouldSuppressDbgOutputOnException(&pEvt->u.Exception.ExceptionRecord);
 
     *pbExceptionHandled = false;
 
@@ -850,9 +882,12 @@ void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt, bool *pbExcepti
         }
     }
 
-    DbgOut("Exception 0x%x at address 0x%p",
-           pEvt->u.Exception.ExceptionRecord.ExceptionCode,
-           pEvt->u.Exception.ExceptionRecord.ExceptionAddress);
+    if (!bSuppressDbgOutput)
+    {
+        DbgOut("Exception 0x%x at address 0x%p",
+               pEvt->u.Exception.ExceptionRecord.ExceptionCode,
+               pEvt->u.Exception.ExceptionRecord.ExceptionAddress);
+    }
 
     if (pEvt->u.Exception.ExceptionRecord.ExceptionCode ==
                 STATUS_TRANSLATE_PROCESS_SNAPSHOT_HANDLE &&

@@ -97,7 +97,7 @@ DWORD64 WINAPI NewWerpTraceSnapshotStatistics(LPVOID    pUnknown1,
     // TODO remove
     DbgOut("NewWerpTraceSnapshotStatistics(%p, %p, %p)", pUnknown1, pUnknown2, SnapshotHandle);
 
-    SnapshotHandle = TranslateSnapshotHandleByDebugger(SnapshotHandle);
+    SnapshotHandle = TranslateSnapshotHandleByDebugger(SnapshotHandle, 0);
 
     DbgOut("  handle after translation: 0x%p", SnapshotHandle);
 

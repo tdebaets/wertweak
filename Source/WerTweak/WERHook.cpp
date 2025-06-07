@@ -193,6 +193,33 @@ DWORD WINAPI NewWERPssDuplicateSnapshot(HANDLE                 SourceProcessHand
     return dwResult;
 }
 
+PVOID g_pPrevWERPssWalkSnapshot = NULL;
+
+DWORD WINAPI NewWERPssWalkSnapshot(HPSS                         SnapshotHandle,
+                                   PSS_WALK_INFORMATION_CLASS   InformationClass,
+                                   HPSSWALK                     WalkMarkerHandle,
+                                   void                        *Buffer,
+                                   DWORD                        BufferLength)
+{
+    DWORD dwResult;
+
+    DbgOut("WER PssWalkSnapshot(0x%p, %u)", SnapshotHandle, InformationClass);
+
+    SnapshotHandle = TranslateSnapshotHandleByDebugger(SnapshotHandle);
+
+    DbgOut("  handle after translation: 0x%p", SnapshotHandle);
+
+    dwResult = ((PPSS_WALK_SNAPSHOT)g_pPrevWERPssWalkSnapshot)(SnapshotHandle,
+                                                               InformationClass,
+                                                               WalkMarkerHandle,
+                                                               Buffer,
+                                                               BufferLength);
+
+    DbgOut("  result=%u", dwResult);
+
+    return dwResult;
+}
+
 void CWERHook::HookWER()
 {
     WalkImportModules();
@@ -232,6 +259,11 @@ void CWERHook::PatchImportedModule(PIMAGE_THUNK_DATA pOrigFirstThunk,
         {
             // TODO: add error checking
             PatchImport(pThunk, NewWERPssDuplicateSnapshot, (PVOID *)&g_pPrevWERPssDuplicateSnapshot);
+        }
+        else if (lstrcmpA(importName, g_szPssWalkSnapshotName) == 0)
+        {
+            // TODO: add error checking
+            PatchImport(pThunk, NewWERPssWalkSnapshot, (PVOID *)&g_pPrevWERPssWalkSnapshot);
         }
 
 next:

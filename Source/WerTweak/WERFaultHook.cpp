@@ -28,10 +28,11 @@
 #include "WERFaultHook.h"
 
 // TODO: move to WERHook/ProcessSnapshotHook?
-static const LPCSTR g_szProcessSnapshotApiSetName       = "api-ms-win-core-processsnapshot-l1-1-0.dll";
+static const LPCSTR g_szProcessSnapshotApiSetName   = "api-ms-win-core-processsnapshot-l1-1-0.dll";
 
-static const LPCSTR g_szPssQuerySnapshotName            = "PssQuerySnapshot";
-static const LPCSTR g_szPssDuplicateSnapshotName        = "PssDuplicateSnapshot";
+static const LPCSTR g_szPssQuerySnapshotName        = "PssQuerySnapshot";
+static const LPCSTR g_szPssDuplicateSnapshotName    = "PssDuplicateSnapshot";
+static const LPCSTR g_szPssWalkSnapshotName         = "PssWalkSnapshot";
 
 /*
  * Dummy function (that must never be inlined) that just returns the given process snapshot handle

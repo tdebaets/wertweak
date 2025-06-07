@@ -28,6 +28,7 @@ extern const LPCSTR g_szProcessSnapshotApiSetName;
 
 extern const LPCSTR g_szPssQuerySnapshotName;
 extern const LPCSTR g_szPssDuplicateSnapshotName;
+extern const LPCSTR g_szPssWalkSnapshotName;
 
 typedef DWORD (WINAPI *PPSS_QUERY_SNAPSHOT) (HPSS                           SnapshotHandle,
                                              PSS_QUERY_INFORMATION_CLASS    InformationClass,
@@ -39,6 +40,12 @@ typedef DWORD (WINAPI *PPSS_DUPLICATE_SNAPSHOT) (HANDLE                 SourcePr
                                                  HANDLE                 TargetProcessHandle,
                                                  HPSS                  *TargetSnapshotHandle,
                                                  PSS_DUPLICATE_FLAGS    Flags);
+
+typedef DWORD (WINAPI *PPSS_WALK_SNAPSHOT) (HPSS                         SnapshotHandle,
+                                            PSS_WALK_INFORMATION_CLASS   InformationClass,
+                                            HPSSWALK                     WalkMarkerHandle,
+                                            void                        *Buffer,
+                                            DWORD                        BufferLength);
 /*
  * To allow WerTweakInject to detect the debug breakpoint in TranslateSnapshotHandleByDebugger(),
  * we put this function in a separate, dedicated PE section. Note that just specifying 'code_seg'

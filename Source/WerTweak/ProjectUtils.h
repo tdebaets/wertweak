@@ -30,3 +30,16 @@
     _DbgOut(L"WerTweak: " kwszDebugFormatString, __VA_ARGS__)
 
 #define TRANSLATE_HPSS_SEGMENT_NAME ".thpss"
+
+// TODO: move to common
+// Macro to make our own exception code
+#define MAKE_EXCEPTION_CODE(_severity, _facility, _exception) \
+    (((_severity) << 30) | (1 << 29) | (0 << 28) | ((_facility) << 16) | (_exception))
+
+#define FACILITY_WERTWEAK 0x2DA // randomly generated
+
+// Actual exception code value: 0x62DA1ECE
+#define STATUS_TRANSLATE_PROCESS_SNAPSHOT_HANDLE            \
+    MAKE_EXCEPTION_CODE(STATUS_SEVERITY_INFORMATIONAL,      \
+                        FACILITY_WERTWEAK,                  \
+                        0x1ECE /* randomly generated */)

@@ -23,7 +23,10 @@
 
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
 // Windows Header Files
+#define WIN32_NO_STATUS
 #include <windows.h>
+#undef WIN32_NO_STATUS
+#include <ntstatus.h>
 #include <delayloadhandler.h>
 #include <WerApi.h>
 #include <ProcessSnapshot.h>

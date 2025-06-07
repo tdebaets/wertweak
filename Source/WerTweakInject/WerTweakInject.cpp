@@ -27,6 +27,7 @@
 #include "..\WerTweak\ProjectUtils.h"
 #include "WerTweakInject.h"
 
+// TODO: debug "WerTweak: Debug string: Invalid parameter passed to C runtime function."
 // TODO: use DWORD_PTR instead of UINT_PTR
 // TODO: retest on 32-bit OS
 // TODO: fix release mode WerTweak64.exe crashing on process close when handling hang/crash (only on Win10?)
@@ -636,21 +637,17 @@ exit:
     return bResult;
 }
 
-bool HandleTranslateProcessSnapshotHandle(tProcInfo *pProcInfo)
+bool HandleTranslateProcessSnapshotHandle(tProcInfo *pProcInfo, PEXCEPTION_RECORD pExceptionRecord)
 {
-    CONTEXT context         = {};
     PVOID   pSnapshotHandle = NULL;
     HPSS    hSnapshot       = NULL;
     HPSS    hTargetSnapshot = NULL;
-
-    context.ContextFlags = CONTEXT_FULL;
 
     /*
      * When being launched for a 32-bit process, WerFault doesn't appear to require any translation
      * of process snapshot handles (both on 32-bit and 64-bit Windows), so we can just skip this
      * case.
-     * Note for 64-bit Windows (non-native): if this would every be required after all, we will have
-     * to call Wow64GetThreadContext() instead of GetThreadContext() and the
+     * Note for 64-bit Windows (non-native): if this would every be required after all, the
      * ReadTargetMemory()/WriteTargetMemory() calls will have to be modified to read/write a 32-bit
      * HPSS value instead of a 64-bit value.
      * Note for 32-bit Windows (native): this was already quickly tested and should just work as is.
@@ -661,14 +658,14 @@ bool HandleTranslateProcessSnapshotHandle(tProcInfo *pProcInfo)
         return true;
     }
 
-    // TODO: fix thread handle
-    if (!GetThreadContext(pProcInfo->createInfo.hThread, &context))
+    if (pExceptionRecord->NumberParameters != 1)
     {
-        DbgOut("GetThreadContext failed (%u)", GetLastError());
+        DbgOut("Unexpected number of exception parameters: %u", pExceptionRecord->NumberParameters);
         return false;
     }
 
-    pSnapshotHandle = (HPSS)CONTEXT_AX(&context);
+    // TODO: cleanup
+    pSnapshotHandle = (PVOID)pExceptionRecord->ExceptionInformation[0];
 
     DbgOut("Snapshot handle address: %p", pSnapshotHandle);
 
@@ -764,23 +761,8 @@ void OnProcessExit(DEBUG_EVENT* pEvt)
            pEvt->u.ExitProcess.dwExitCode);
 }
 
-void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
+void OnProcessBreakpoint(tProcInfo* pProcInfo, DEBUG_EVENT* pEvt)
 {
-    tInjectDllInfo *pInjectDllInfo = pProcInfo->bIs32Bit ? &g_injectDllInfo32 : &g_injectDllInfo64;
-
-    // We're only interested in breakpoint exceptions, but need to be careful which type to handle
-    // depending on native/non-native bitness
-    if (pProcInfo->bIsNative)
-    {
-        if (pEvt->u.Exception.ExceptionRecord.ExceptionCode != EXCEPTION_BREAKPOINT)
-            return;
-    }
-    else
-    {
-        if (pEvt->u.Exception.ExceptionRecord.ExceptionCode != STATUS_WX86_BREAKPOINT)
-            return;
-    }
-
     if (!pProcInfo->bInjected)
     {
         if (!pProcInfo->bFirstBPHit)
@@ -839,23 +821,64 @@ void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
         DbgOut("Breakpoint during regular execution at address 0x%p",
                pEvt->u.Exception.ExceptionRecord.ExceptionAddress);
 
-        if (pProcInfo->pInjectedDllBaseInTarget &&
-            pInjectDllInfo->dwTranslateHpssSectionRva &&
-            pInjectDllInfo->dwTranslateHpssSectionSize)
-        {
-            UINT_PTR uptrExceptionAddress           =
-                (UINT_PTR)pEvt->u.Exception.ExceptionRecord.ExceptionAddress;
-            UINT_PTR uptrTranslateHpssSectionStart  =
-                (UINT_PTR)pProcInfo->pInjectedDllBaseInTarget +
-                pInjectDllInfo->dwTranslateHpssSectionRva;
-            UINT_PTR uptrTranslateHpssSectionEnd    = uptrTranslateHpssSectionStart +
-                pInjectDllInfo->dwTranslateHpssSectionSize;
+        // Ignore
+    }
+}
 
-            if (uptrExceptionAddress >= uptrTranslateHpssSectionStart &&
-                uptrExceptionAddress < uptrTranslateHpssSectionEnd)
-            {
-                HandleTranslateProcessSnapshotHandle(pProcInfo);
-            }
+void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt, bool *pbExceptionHandled)
+{
+    tInjectDllInfo *pInjectDllInfo = pProcInfo->bIs32Bit ? &g_injectDllInfo32 : &g_injectDllInfo64;
+
+    *pbExceptionHandled = false;
+
+    // When checking for breakpoint exceptions, we need to be careful which type to handle
+    // depending on native/non-native bitness
+    if (pProcInfo->bIsNative)
+    {
+        if (pEvt->u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT)
+        {
+            OnProcessBreakpoint(pProcInfo, pEvt);
+            return;
+        }
+    }
+    else
+    {
+        if (pEvt->u.Exception.ExceptionRecord.ExceptionCode == STATUS_WX86_BREAKPOINT)
+        {
+            OnProcessBreakpoint(pProcInfo, pEvt);
+            return;
+        }
+    }
+
+    DbgOut("Exception 0x%x at address 0x%p",
+           pEvt->u.Exception.ExceptionRecord.ExceptionCode,
+           pEvt->u.Exception.ExceptionRecord.ExceptionAddress);
+
+    if (pEvt->u.Exception.ExceptionRecord.ExceptionCode ==
+                STATUS_TRANSLATE_PROCESS_SNAPSHOT_HANDLE &&
+        pProcInfo->pInjectedDllBaseInTarget &&
+        pInjectDllInfo->dwTranslateHpssSectionRva &&
+        pInjectDllInfo->dwTranslateHpssSectionSize)
+    {
+        UINT_PTR uptrExceptionAddress =
+            (UINT_PTR)pEvt->u.Exception.ExceptionRecord.ExceptionAddress;
+        UINT_PTR uptrTranslateHpssSectionStart  =
+            (UINT_PTR)pProcInfo->pInjectedDllBaseInTarget +
+            pInjectDllInfo->dwTranslateHpssSectionRva;
+        UINT_PTR uptrTranslateHpssSectionEnd    = uptrTranslateHpssSectionStart +
+            pInjectDllInfo->dwTranslateHpssSectionSize;
+
+        if (uptrExceptionAddress >= uptrTranslateHpssSectionStart &&
+            uptrExceptionAddress < uptrTranslateHpssSectionEnd)
+        {
+            HandleTranslateProcessSnapshotHandle(pProcInfo, &pEvt->u.Exception.ExceptionRecord);
+
+            *pbExceptionHandled = true;
+        }
+        else
+        {
+            DbgOut("Exception STATUS_TRANSLATE_PROCESS_SNAPSHOT_HANDLE outside of expected code "
+                   "section");
         }
     }
 }
@@ -1168,7 +1191,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
     // For the regular process, using a debugger loop is required for WerFault to function correctly!
     while (bRunning)
     {
-        bool bContinue = true; // TODO: just use 'continue' instead
+        bool bContinue          = true; // TODO: just use 'continue' instead
+        bool bExceptionHandled  = false;
 
         if (!WaitForDebugEvent(&dbgEvent, INFINITE))
             break;
@@ -1184,10 +1208,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
             bRunning = false;
             break;
         case EXCEPTION_DEBUG_EVENT:
-            OnProcessException(&g_procInfo, &dbgEvent);
+            OnProcessException(&g_procInfo, &dbgEvent, &bExceptionHandled);
             switch (dbgEvent.u.Exception.ExceptionRecord.ExceptionCode)
             {
-            // A 64-bit debugger debugging a Wow64 process will see both types of breakpoint exceptions
+            // A 64-bit debugger debugging a Wow64 process will see both types of breakpoint
+            // exceptions
             case EXCEPTION_BREAKPOINT:
 #if defined(_WIN64)
             case STATUS_WX86_BREAKPOINT:
@@ -1195,7 +1220,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
                 DbgOut("Breakpoint");
                 break;
             default:
-                ContinueDebugEvent(dbgEvent.dwProcessId, dbgEvent.dwThreadId, DBG_EXCEPTION_NOT_HANDLED);
+                ContinueDebugEvent(dbgEvent.dwProcessId,
+                                   dbgEvent.dwThreadId,
+                                   bExceptionHandled ? DBG_CONTINUE : DBG_EXCEPTION_NOT_HANDLED);
                 bContinue = false;
                 break;
             }

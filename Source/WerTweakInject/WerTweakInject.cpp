@@ -27,7 +27,6 @@
 #include "..\WerTweak\ProjectUtils.h"
 #include "WerTweakInject.h"
 
-// TODO: debug "WerTweak: Debug string: Invalid parameter passed to C runtime function."
 // TODO: use DWORD_PTR instead of UINT_PTR
 // TODO: retest on 32-bit OS
 // TODO: fix release mode WerTweak64.exe crashing on process close when handling hang/crash (only on Win10?)
@@ -105,6 +104,15 @@ bool            g_bIs64BitWindows       = false;
 typedef std::map<HPSS, HPSS> tProcessSnapshotMap;
 tProcessSnapshotMap g_processSnapshotMap;
 
+/*
+ * 32-bit and 64-bit assembly stubs for injecting our DLL into WerFault.exe.
+ * Note about the padding fields: LdrLoadDll() internally calls LdrpLogInternal(..., "%wZ\n",
+ * DllName) which in its turn calls _vsnprintf()->_vsnprintf_l()->output_l(). The last function
+ * expects DllName to be 2-byte aligned and calls the C Runtime Library invalid parameter handler
+ * (_invalid_parameter) if it isn't. So in both these stubs, the data_DllName field must be 2-byte
+ * aligned.
+ */
+
 #pragma pack(push, 1)
 typedef struct tLoadLibraryStub32
 {
@@ -117,6 +125,8 @@ typedef struct tLoadLibraryStub32
     WORD    instr_CALL_EAX;
 
     BYTE    instr_INT_3;
+
+    BYTE    padding;
 
     WCHAR   data_DllName[512];
 } tLoadLibraryStub32;
@@ -138,6 +148,8 @@ typedef struct tLoadLibraryStub64
     WORD    instr_CALL_RAX;
 
     BYTE    instr_INT_3;
+
+    BYTE    padding;
 
     WCHAR   data_DllName[512];
 } tLoadLibraryStub64;
@@ -692,7 +704,7 @@ bool HandleTranslateProcessSnapshotHandle(tProcInfo *pProcInfo, PEXCEPTION_RECOR
 
     if (!bSuppressDbgOutput)
     {
-        DbgOut("Snapshot handle address: %p", pSnapshotHandle);
+        DbgOut("Snapshot handle address: 0x%p", pSnapshotHandle);
     }
 
     if (!pSnapshotHandle)

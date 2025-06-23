@@ -85,23 +85,24 @@ HRESULT WINAPI NewWerReportSubmit(HREPORT               hReportHandle,
 
 PVOID g_pPrevWerpTraceSnapshotStatistics = NULL;
 
-// TODO: improve result type and param types?
-typedef DWORD64 (WINAPI *PWERP_TRACE_SNAPSHOT_STATS) (LPVOID    pUnknown1,
-                                                      LPVOID    pUnknown2,
-                                                      HPSS      SnapshotHandle);
+// The original function doesn't seem to return any value, but preserve it anyway to be safe
+typedef DWORD64 (WINAPI *PWERP_TRACE_SNAPSHOT_STATS) (
+    PWERP_TRACE_SNAPSHOT_STATS_CALLBACK pCallbackProc,
+    PDWORD64                            pdwUnknown,
+    HPSS                                SnapshotHandle);
 
-DWORD64 WINAPI NewWerpTraceSnapshotStatistics(LPVOID    pUnknown1,
-                                              LPVOID    pUnknown2,
-                                              HPSS      SnapshotHandle)
+DWORD64 WINAPI NewWerpTraceSnapshotStatistics(PWERP_TRACE_SNAPSHOT_STATS_CALLBACK   pCallbackProc,
+                                              PDWORD64                              pdwUnknown,
+                                              HPSS                                  SnapshotHandle)
 {
-    // TODO remove
-    DbgOut("NewWerpTraceSnapshotStatistics(%p, %p, %p)", pUnknown1, pUnknown2, SnapshotHandle);
+    // TODO: remove?
+    DbgOut("WerpTraceSnapshotStatistics SnapshotHandle==0x%p", SnapshotHandle);
 
     SnapshotHandle = TranslateSnapshotHandleByDebugger(SnapshotHandle, 0);
 
     DbgOut("  handle after translation: 0x%p", SnapshotHandle);
 
-    return ((PWERP_TRACE_SNAPSHOT_STATS)g_pPrevWerpTraceSnapshotStatistics)(pUnknown1,
-                                                                            pUnknown2,
+    return ((PWERP_TRACE_SNAPSHOT_STATS)g_pPrevWerpTraceSnapshotStatistics)(pCallbackProc,
+                                                                            pdwUnknown,
                                                                             SnapshotHandle);
 }

@@ -34,6 +34,13 @@ HRESULT WINAPI NewWerReportSubmit(HREPORT               hReportHandle,
 
 extern PVOID g_pPrevWerpTraceSnapshotStatistics;
 
-DWORD64 WINAPI NewWerpTraceSnapshotStatistics(LPVOID    pUnknown1,
-                                              LPVOID    pUnknown2,
-                                              HPSS      SnapshotHandle);
+// Taken from debug symbol CProcessDump::static_vLogCallbackRoutine in Wer.pdb
+typedef void (__cdecl *PWERP_TRACE_SNAPSHOT_STATS_CALLBACK) (
+    void *,
+    unsigned long,
+    wchar_t const *,
+    char *);
+
+DWORD64 WINAPI NewWerpTraceSnapshotStatistics(PWERP_TRACE_SNAPSHOT_STATS_CALLBACK   pCallbackProc,
+                                              PDWORD64                              pdwUnknown,
+                                              HPSS                                  SnapshotHandle);

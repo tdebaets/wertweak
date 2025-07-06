@@ -25,7 +25,7 @@
 #include <WerApi.h>
 #include <Wow64Utils.h>
 
-#include "..\WerTweak\ProjectUtils.h"
+#include "..\WerTweak.h"
 #include "..\WerTweakInject\WerTweakInject.h"
 
 #define MAX_LOADSTRING 100

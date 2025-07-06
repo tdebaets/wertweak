@@ -23,8 +23,8 @@
 
 #include <DelayLoadUtils.h>
 
+#include "..\WerTweak.h"
 #include "PEUtils.h"
-#include "ProjectUtils.h"
 #include "WERUIHook.h"
 
 static const LPCSTR g_szWindow0ApiSetName = "ext-ms-win-ntuser-window-l1-1-0.dll";

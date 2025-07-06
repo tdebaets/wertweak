@@ -21,9 +21,6 @@
     <ClInclude Include="pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ProjectUtils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="WERHook.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -40,6 +37,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="WERFaultHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\WerTweak.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

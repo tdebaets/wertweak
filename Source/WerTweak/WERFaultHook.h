@@ -21,8 +21,8 @@
 
 #pragma once
 
+#include "..\WerTweak.h"
 #include "PEModuleWalker.h"
-#include "ProjectUtils.h"
 
 extern const LPCSTR g_szProcessSnapshotApiSetName;
 

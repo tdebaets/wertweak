@@ -24,7 +24,7 @@
 #include <Processes.h>
 #include <Wow64Utils.h>
 
-#include "..\WerTweak\ProjectUtils.h"
+#include "..\WerTweak.h"
 #include "WerTweakInject.h"
 
 // TODO: use DWORD_PTR instead of UINT_PTR

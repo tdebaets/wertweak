@@ -23,8 +23,8 @@
 
 #include <DelayLoadUtils.h>
 
+#include "..\WerTweak.h"
 #include "PEUtils.h"
-#include "ProjectUtils.h"
 #include "WERFaultHook.h"
 #include "WERHook.h"
 #include "WERUIHook.h"

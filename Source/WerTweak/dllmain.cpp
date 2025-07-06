@@ -21,9 +21,9 @@
 
 #include "pch.h"
 
+#include "..\WerTweak.h"
 #include "FaultRepHook.h"
 #include "Processes.h"
-#include "ProjectUtils.h"
 #include "WERExportHook.h"
 #include "WERFaultHook.h"
 #include "WERHook.h"

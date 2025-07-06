@@ -20,7 +20,7 @@
  ****************************************************************************/
 
 #include "pch.h"
-#include "ProjectUtils.h"
+#include "..\WerTweak.h"
 #include "WERUIExportHook.h"
 
 static const LPCSTR g_szWerUIDllName    = "werui.dll";

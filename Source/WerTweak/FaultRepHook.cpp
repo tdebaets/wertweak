@@ -23,9 +23,9 @@
 
 #include <DelayLoadUtils.h>
 
+#include "..\WerTweak.h"
 #include "FaultRepHook.h"
 #include "PEUtils.h"
-#include "ProjectUtils.h"
 #include "WERExportHook.h"
 
 PRESOLVE_DELAY_LOADED_API g_pFaultRepPrevResolveDelayLoadedAPI = NULL;

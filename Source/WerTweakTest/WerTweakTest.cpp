@@ -19,7 +19,7 @@
  *
  ****************************************************************************/
 
-#include "framework.h"
+#include "pch.h"
 #include "WerTweakTest.h"
 
 #include <WerApi.h>

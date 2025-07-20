@@ -19,7 +19,7 @@
  *
  ****************************************************************************/
 
-#include "framework.h"
+#include "pch.h"
 
 #include <Processes.h>
 #include <Wow64Utils.h>
@@ -31,6 +31,14 @@
 // TODO: fix release mode WerTweak64.exe crashing on process close when handling hang/crash (only on Win10?)
 // TODO: retest with crash handling
 // TODO: test on Win11 insider preview
+// TODO: make sure that the WER DontShowUI policy is also set to disabled (otherwise there's no UI at all)
+//   HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting\DontShowUI
+//   HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\DontShowUI
+//   "Disabled" value in same keys should also be set to 0
+// Should also be set to value 1:
+//  HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DataCollection\AllowTelemetry
+// Check these values and correct them in installer?
+// TODO: try to fix double report on Explorer.exe crash (might be related to Symantec Endpoint Protection)
 // TODO: add memleak checks
  
 #define OPCODE_INT3         ((BYTE)0xCC)

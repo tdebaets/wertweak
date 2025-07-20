@@ -28,15 +28,6 @@
 #include "WERFaultHook.h"
 #include "WERHook.h"
 
-// TODO: rename or move all framework.h files to a single pch.h file for each project (https://docs.microsoft.com/en-us/windows/uwp/cpp-and-winrt-apis/get-started)
-// TODO: make sure that the WER DontShowUI policy is also set to disabled (otherwise there's no UI at all)
-//   HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting\DontShowUI
-//   HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\DontShowUI
-//   "Disabled" value in same keys should also be set to 0
-// Should also be set to value 1:
-//  HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DataCollection\AllowTelemetry
-// TODO: try to fix double report on Explorer.exe crash (might be related to Symantec Endpoint Protection)
-
 static const LPCSTR g_szFaultRepDllName = "faultrep.dll";
 
 void HandleProcessAttach(HMODULE hModule)

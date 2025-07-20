@@ -187,7 +187,6 @@
   <ItemGroup>
     <ClInclude Include="..\WerTweak.h" />
     <ClInclude Include="FaultRepHook.h" />
-    <ClInclude Include="framework.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="WERExportHook.h" />
     <ClInclude Include="WERFaultHook.h" />

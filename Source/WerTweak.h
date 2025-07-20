@@ -21,8 +21,6 @@
 
 #pragma once
 
-// TODO: move and rename this file
-
 #include "Utils.h"
 
 #undef DbgOut

@@ -27,7 +27,6 @@
 #include "..\WerTweak.h"
 #include "WerTweakInject.h"
 
-// TODO: use DWORD_PTR instead of UINT_PTR
 // TODO: retest on 32-bit OS
 // TODO: fix release mode WerTweak64.exe crashing on process close when handling hang/crash (only on Win10?)
 // TODO: retest with crash handling
@@ -512,7 +511,7 @@ bool SaveBaseAddressAndRestoreEntryPointContext(tProcInfo *pProcInfo)
 
         if (Wow64GetThreadContext(pProcInfo->createInfo.hThread, &context))
         {
-            pProcInfo->pInjectedDllBaseInTarget = (PVOID)(UINT_PTR)context.Eax;
+            pProcInfo->pInjectedDllBaseInTarget = (PVOID)(DWORD_PTR)context.Eax;
         }
         else
         {
@@ -907,16 +906,16 @@ void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt, bool *pbExcepti
         pInjectDllInfo->dwTranslateHpssSectionRva &&
         pInjectDllInfo->dwTranslateHpssSectionSize)
     {
-        UINT_PTR uptrExceptionAddress =
-            (UINT_PTR)pEvt->u.Exception.ExceptionRecord.ExceptionAddress;
-        UINT_PTR uptrTranslateHpssSectionStart  =
-            (UINT_PTR)pProcInfo->pInjectedDllBaseInTarget +
+        DWORD_PTR dwpExceptionAddress =
+            (DWORD_PTR)pEvt->u.Exception.ExceptionRecord.ExceptionAddress;
+        DWORD_PTR dwpTranslateHpssSectionStart =
+            (DWORD_PTR)pProcInfo->pInjectedDllBaseInTarget +
             pInjectDllInfo->dwTranslateHpssSectionRva;
-        UINT_PTR uptrTranslateHpssSectionEnd    = uptrTranslateHpssSectionStart +
+        DWORD_PTR dwpTranslateHpssSectionEnd = dwpTranslateHpssSectionStart +
             pInjectDllInfo->dwTranslateHpssSectionSize;
 
-        if (uptrExceptionAddress >= uptrTranslateHpssSectionStart &&
-            uptrExceptionAddress < uptrTranslateHpssSectionEnd)
+        if (dwpExceptionAddress >= dwpTranslateHpssSectionStart &&
+            dwpExceptionAddress < dwpTranslateHpssSectionEnd)
         {
             HandleTranslateProcessSnapshotHandle(pProcInfo, &pEvt->u.Exception.ExceptionRecord);
 

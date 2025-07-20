@@ -28,8 +28,6 @@
 #include "WERFaultHook.h"
 #include "WERHook.h"
 
-// TODO: remove topmost extended style from crash report dialogs?
-// TODO: create new library for common includes
 // TODO: rename or move all framework.h files to a single pch.h file for each project (https://docs.microsoft.com/en-us/windows/uwp/cpp-and-winrt-apis/get-started)
 // TODO: make sure that the WER DontShowUI policy is also set to disabled (otherwise there's no UI at all)
 //   HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting\DontShowUI

@@ -40,7 +40,7 @@
 // Check these values and correct them in installer?
 // TODO: try to fix double report on Explorer.exe crash (might be related to Symantec Endpoint Protection)
 // TODO: add memleak checks
- 
+
 #define OPCODE_INT3         ((BYTE)0xCC)
 #define OPCODE_REXW_PREFIX  ((BYTE)0x48)
 #define OPCODE_SUB_ESP      ((WORD)0xEC83) // reverse byte order due to endianness
@@ -539,6 +539,22 @@ bool SaveBaseAddressAndRestoreEntryPointContext(tProcInfo *pProcInfo)
     return true;
 }
 
+bool FreeStub(tProcInfo *pProcInfo)
+{
+    if (!pProcInfo->pStubInTarget)
+        return true;
+
+    if (!VirtualFreeEx(pProcInfo->createInfo.hProcess, pProcInfo->pStubInTarget, 0, MEM_RELEASE))
+    {
+        DbgOut("VirtualFreeEx failed (%u)", GetLastError());
+        return false;
+    }
+
+    pProcInfo->pStubInTarget = NULL;
+    
+    return true;
+}
+
 bool InjectCode(tProcInfo *pProcInfo)
 {
     tLoadLibraryStub32  stub32              = {};
@@ -641,7 +657,7 @@ bool InjectCode(tProcInfo *pProcInfo)
 
     pProcInfo->pStubInTarget    = pStubInTarget;
     pProcInfo->pStubInTargetBP  = pStubInTargetBP;
-    pStubInTarget = NULL; // will be freed later TODO
+    pStubInTarget = NULL; // will be freed later in FreeStub()
 
     bResult = true;
 
@@ -859,7 +875,7 @@ void OnProcessBreakpoint(tProcInfo* pProcInfo, DEBUG_EVENT* pEvt)
                 DbgOut("Failed to restore entry point context");
             }
 
-            // TODO: free stub
+            FreeStub(pProcInfo);
 
             pProcInfo->bInjected = true;
         }

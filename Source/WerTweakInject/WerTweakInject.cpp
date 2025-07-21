@@ -1261,8 +1261,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
     // For the regular process, using a debugger loop is required for WerFault to function correctly!
     while (bRunning)
     {
-        bool bContinue          = true; // TODO: just use 'continue' instead
-        bool bExceptionHandled  = false;
+        bool bExceptionHandled = false;
 
         if (!WaitForDebugEvent(&dbgEvent, INFINITE))
             break;
@@ -1293,7 +1292,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
                 ContinueDebugEvent(dbgEvent.dwProcessId,
                                    dbgEvent.dwThreadId,
                                    bExceptionHandled ? DBG_CONTINUE : DBG_EXCEPTION_NOT_HANDLED);
-                bContinue = false;
+                continue; // We just called ContinueDebugEvent(), so skip the call below
                 break;
             }
             break;
@@ -1309,12 +1308,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
             break;
         }
 
-        if (bContinue)
-        {
-            // Must use DBG_CONTINUE here, otherwise exceptions with OUTPUT_DEBUG_STRING_EVENT on NT!!!!
-            if (!ContinueDebugEvent(dbgEvent.dwProcessId, dbgEvent.dwThreadId, DBG_CONTINUE))
-                break;
-        }
+        // Must use DBG_CONTINUE here, otherwise exceptions with OUTPUT_DEBUG_STRING_EVENT on NT!!!!
+        if (!ContinueDebugEvent(dbgEvent.dwProcessId, dbgEvent.dwThreadId, DBG_CONTINUE))
+            break;
     }
 
 exit:

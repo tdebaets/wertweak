@@ -953,43 +953,10 @@ void OnProcessException(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt, bool *pbExcepti
     }
 }
 
-// TODO: remove?
-void OnLoadDll(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
-{
-    PVOID   pImageNameAddr = NULL;
-    wstring strImageName;
-
-    // TODO: test unicode
-    if (pEvt->u.LoadDll.lpImageName)
-    {
-        if (!ReadTargetMemory(pProcInfo->createInfo.hProcess,
-                              pEvt->u.LoadDll.lpImageName,
-                              &pImageNameAddr, sizeof(pImageNameAddr)))
-        {
-            DbgOut("Failed to read DLL filename from target process (1) (%u)", GetLastError());
-        }
-        else if (!pImageNameAddr)
-        {
-            DbgOut("Failed to read DLL filename from target process (2)");
-        }
-        else if (!ReadProcessString(pProcInfo->createInfo.hProcess,
-                                    pEvt->u.LoadDll.fUnicode,
-                                    pImageNameAddr,
-                                    MAX_PATH,
-                                    strImageName))
-        {
-            DbgOut("Failed to read DLL filename from target process (3) (%u)", GetLastError());
-        }
-    }
-
-    DbgOut("Load DLL: %ws @ 0x%p", strImageName.c_str(), pEvt->u.LoadDll.lpBaseOfDll);
-}
-
 void OnDebugString(tProcInfo *pProcInfo, DEBUG_EVENT *pEvt)
 {
     wstring dbgString;
 
-    // TODO: test unicode
     if (!ReadProcessString(pProcInfo->createInfo.hProcess,
                            pEvt->u.DebugString.fUnicode,
                            pEvt->u.DebugString.lpDebugStringData,
@@ -1264,7 +1231,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
     {
         bool bExceptionHandled = false;
 
-        if (!WaitForDebugEvent(&dbgEvent, INFINITE))
+        if (!WaitForDebugEventEx(&dbgEvent, INFINITE))
             break;
 
         switch (dbgEvent.dwDebugEventCode)
@@ -1302,7 +1269,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
             CloseHandleSafe(&dbgEvent.u.CreateThread.hThread);
             break;
         case LOAD_DLL_DEBUG_EVENT:
-            //OnLoadDll(&g_procInfo, &dbgEvent);
             CloseHandleSafe(&dbgEvent.u.LoadDll.hFile);
             break;
         case OUTPUT_DEBUG_STRING_EVENT:

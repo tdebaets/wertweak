@@ -1140,6 +1140,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
     PROCESS_INFORMATION procInfo    = {};
     DEBUG_EVENT         dbgEvent    = {};
     SidWrapper          procSid;
+    DWORD               dwExitCode  = 0;
     bool                bRunning    = true;
 
     startupInfo.cb = sizeof(startupInfo);
@@ -1274,6 +1275,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
             break;
         case EXIT_PROCESS_DEBUG_EVENT:
             OnProcessExit(&dbgEvent);
+            dwExitCode = dbgEvent.u.ExitProcess.dwExitCode;
             bRunning = false;
             break;
         case EXCEPTION_DEBUG_EVENT:
@@ -1321,6 +1323,5 @@ exit:
 
     DbgOut("Done");
 
-    // TODO: exit with same code as WerFault did?
-    return 0;
+    return dwExitCode;
 }

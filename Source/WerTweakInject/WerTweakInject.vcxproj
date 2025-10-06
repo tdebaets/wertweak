@@ -166,9 +166,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="DLLInject.cpp" />
     <ClCompile Include="WerTweakInject.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DLLInject.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="WerTweakInject.h" />

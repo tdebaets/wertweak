@@ -141,7 +141,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
                        &procInfo))
     {
         DbgOut("CreateProcess failed (%u)", GetLastError());
-        return 6;
+        return 3;
     }
 
     if (!DebugSetProcessKillOnExit(FALSE))
@@ -149,28 +149,36 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
         DbgOut("DebugSetProcessKillOnExit failed! (%u)", GetLastError());
     }
 
-    CWERFaultDLLInject dllInject(&procInfo.hProcess);
-
-    /*
-     * When a process crashes, Windows 10 starts two instances of WerFault.exe: one instance as a
-     * SYSTEM process, and one instance as a regular user process. We're only interested in hooking
-     * the user process, so exit if we're running as SYSTEM.
-     */
-    if (IsSystemSid((PSID)&procSid[0]))
+    try
     {
-        DbgOut("Running as a SYSTEM process, exiting");
-        goto exit;
+        CWERFaultDLLInject dllInject(&procInfo.hProcess);
+
+        /*
+         * When a process crashes, Windows 10 starts two instances of WerFault.exe: one instance as
+         * a SYSTEM process, and one instance as a regular user process. We're only interested in
+         * hooking the user process, so exit if we're running as SYSTEM.
+         */
+        if (IsSystemSid((PSID)&procSid[0]))
+        {
+            DbgOut("Running as a SYSTEM process, exiting");
+            goto exit;
+        }
+
+        /*
+         * Run the debug loop. Note: for the WerFault.exe regular user process, using a debugger
+         * loop is required for it to function correctly!
+         */
+        dllInject.Run();
+
+        dwExitCode = dllInject.GetExitCode();
+    }
+    catch (CProcessDLLInjectError& error)
+    {
+        DbgOut("%hs", error.what());
+        return 4;
     }
 
-    /*
-     * Run the debug loop. Note: for the WerFault.exe regular user process, using a debugger loop is
-     * required for it to function correctly!
-     */
-    dllInject.Run();
-
     DbgOut("Done");
-
-    dwExitCode = dllInject.GetExitCode();
 
 exit:
 

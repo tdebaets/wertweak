@@ -43,6 +43,14 @@ public: // TODO: improve? getters?
     DWORD   m_dwTranslateHpssSectionSize;
 };
 
+class CWERFaultDLLInjectError : public runtime_error
+{
+public:
+    CWERFaultDLLInjectError(const string &_Message) : runtime_error(_Message.c_str()) {}
+
+    CWERFaultDLLInjectError(const char *_Message) : runtime_error(_Message) {}
+};
+
 class CWERFaultDLLInject : public CProcessDLLInject
 {
 public:

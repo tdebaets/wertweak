@@ -49,23 +49,24 @@ CWERFaultDLLInjectInfo::CWERFaultDLLInjectInfo(WORD wImageFileMachine /* IMAGE_F
     case IMAGE_FILE_MACHINE_I386:
         if (!RetrieveInfo(g_pszWerTweakDllName32))
         {
-            DbgOut("Failed to retrieve 32-bit inject DLL file info");
-            // TODO: throw exception
+            throw CWERFaultDLLInjectError("Failed to retrieve 32-bit inject DLL file info");
         }
         break;
 
-#if defined(_WIN64) // TODO: remove?
     case IMAGE_FILE_MACHINE_AMD64:
+#if defined(_WIN64)
         if (!RetrieveInfo(g_pszWerTweakDllName64))
         {
-            DbgOut("Failed to retrieve 64-bit inject DLL file info");
-            // TODO: throw exception
+            throw CWERFaultDLLInjectError("Failed to retrieve 64-bit inject DLL file info");
         }
-        break;
+#else
+        // Ignore in 32-bit builds
 #endif
+        break;
 
     default:
-        // TODO: throw exception
+        throw CWERFaultDLLInjectError(std::format("Unexpected IMAGE_FILE_MACHINE: {:#x}",
+                                                  wImageFileMachine));
         break;
     }
 }
@@ -159,7 +160,7 @@ CWERFaultDLLInject::CWERFaultDLLInject(const wstring   &strDLLFilename32,
     m_dwExitCode(0),
     CProcessDLLInject(strDLLFilename32, strDLLFilename64)
 {
-    // TODO: throw exception
+    throw CWERFaultDLLInjectError("Default constructor should not be called");
 }
 
 CWERFaultDLLInject::CWERFaultDLLInject(HANDLE          *phProcess) :
@@ -225,6 +226,7 @@ void CWERFaultDLLInject::OnProcessExit(DWORD                        dwProcessID,
     m_dwExitCode = pInfo->dwExitCode;
 }
 
+// TODO: completely remove method, the DbgOut call slows down the hot code path again
 void CWERFaultDLLInject::OnException(DWORD                          dwProcessID,
                                      DWORD                          dwThreadID,
                                      EXCEPTION_DEBUG_INFO          *pInfo,

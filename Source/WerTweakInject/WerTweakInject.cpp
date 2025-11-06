@@ -177,6 +177,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE        hInstance,
         DbgOut("%hs", error.what());
         return 4;
     }
+    catch (CWERFaultDLLInjectError& error)
+    {
+        DbgOut("%hs", error.what());
+        return 5;
+    }
 
     DbgOut("Done");
 

@@ -47,7 +47,9 @@
 #include <AtlBase.h>
 #include <atlconv.h>
 
+#include <format>
 #include <map>
 #include <sstream>
+#include <stdexcept>
 
 using namespace std;

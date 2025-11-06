@@ -226,17 +226,6 @@ void CWERFaultDLLInject::OnProcessExit(DWORD                        dwProcessID,
     m_dwExitCode = pInfo->dwExitCode;
 }
 
-// TODO: completely remove method, the DbgOut call slows down the hot code path again
-void CWERFaultDLLInject::OnException(DWORD                          dwProcessID,
-                                     DWORD                          dwThreadID,
-                                     EXCEPTION_DEBUG_INFO          *pInfo,
-                                     bool                          *pbExceptionHandled)
-{
-    DbgOut("Process exception");
-
-    __super::OnException(dwProcessID, dwThreadID, pInfo, pbExceptionHandled);
-}
-
 void CWERFaultDLLInject::OnDebugString(DWORD                        dwProcessID,
                                        DWORD                        dwThreadID,
                                        OUTPUT_DEBUG_STRING_INFO    *pInfo)

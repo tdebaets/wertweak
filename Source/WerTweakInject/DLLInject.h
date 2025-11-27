@@ -75,10 +75,6 @@ protected:
     virtual void OnProcessExit(DWORD                        dwProcessID,
                                EXIT_PROCESS_DEBUG_INFO     *pInfo);
 
-    virtual void OnDebugString(DWORD                        dwProcessID,
-                               DWORD                        dwThreadID,
-                               OUTPUT_DEBUG_STRING_INFO    *pInfo);
-
     virtual void OnDbgOut(LPCTSTR message);
 
     /* CProcessDLLInject */
@@ -87,6 +83,11 @@ protected:
                               DWORD                         dwThreadID,
                               EXCEPTION_DEBUG_INFO         *pInfo,
                               bool                         *pbExceptionHandled);
+
+    virtual void OnDebugString2(const tProcInfo            *pProcInfo,
+                                DWORD                       dwThreadID,
+                                OUTPUT_DEBUG_STRING_INFO   *pInfo,
+                                LPCWSTR                     wszDebugString);
 
 private:
 

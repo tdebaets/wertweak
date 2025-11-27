@@ -226,25 +226,6 @@ void CWERFaultDLLInject::OnProcessExit(DWORD                        dwProcessID,
     m_dwExitCode = pInfo->dwExitCode;
 }
 
-void CWERFaultDLLInject::OnDebugString(DWORD                        dwProcessID,
-                                       DWORD                        dwThreadID,
-                                       OUTPUT_DEBUG_STRING_INFO    *pInfo)
-{
-    wstring dbgString;
-
-    if (!ReadProcessString(m_hProcess,
-                           pInfo->fUnicode,
-                           pInfo->lpDebugStringData,
-                           pInfo->nDebugStringLength,
-                           dbgString))
-    {
-        DbgOut("Failed to read debug string from target process (%u)", GetLastError());
-        return;
-    }
-
-    DbgOut("Debug string: %ws", dbgString.c_str());
-}
-
 void CWERFaultDLLInject::OnDbgOut(LPCTSTR message)
 {
     DbgOut("%s", message);
@@ -325,6 +306,14 @@ void CWERFaultDLLInject::OnException2(const tProcInfo              *pProcInfo,
                    "section");
         }
     }
+}
+
+void CWERFaultDLLInject::OnDebugString2(const tProcInfo            *pProcInfo,
+                                        DWORD                       dwThreadID,
+                                        OUTPUT_DEBUG_STRING_INFO   *pInfo,
+                                        LPCWSTR                     wszDebugString)
+{
+    DbgOut("Debug string: %ws", wszDebugString);
 }
 
 DWORD PssDuplicateSnapshotExceptionFilter(DWORD dwExceptionCode)

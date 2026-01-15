@@ -226,9 +226,16 @@ void CWERFaultDLLInject::OnProcessExit(DWORD                        dwProcessID,
     m_dwExitCode = pInfo->dwExitCode;
 }
 
-void CWERFaultDLLInject::OnDbgOut(LPCTSTR message)
+void CWERFaultDLLInject::OnDbgOut(LPCWSTR wszFormat, va_list argList)
 {
-    DbgOut("%s", message);
+    PWCHAR wszMessage = NULL;
+
+    if (FormatArgListAlloc(wszFormat, argList, &wszMessage) == 0)
+        return;
+
+    DbgOut("%s", wszMessage);
+
+    FormatArgListFree(&wszMessage);
 }
 
 /*

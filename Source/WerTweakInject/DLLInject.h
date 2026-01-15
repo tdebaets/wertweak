@@ -75,7 +75,7 @@ protected:
     virtual void OnProcessExit(DWORD                        dwProcessID,
                                EXIT_PROCESS_DEBUG_INFO     *pInfo);
 
-    virtual void OnDbgOut(LPCTSTR message);
+    virtual void OnDbgOut(LPCWSTR wszFormat, va_list argList);
 
     /* CProcessDLLInject */
 

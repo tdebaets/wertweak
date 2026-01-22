@@ -64,7 +64,7 @@ void HandleProcessAttach(HMODULE hModule)
     }
     catch (CPEModuleWalkerError & error)
     {
-        DbgOut("Error walking WerFault.exe import modules: %s", error.what());
+        DbgOut("Error walking WerFault.exe import modules: %hs", error.what());
     }
 
     hmodWer = GetModuleHandleA(g_szWerDllName);
@@ -82,7 +82,7 @@ void HandleProcessAttach(HMODULE hModule)
     }
     catch (CPEModuleWalkerError & error)
     {
-        DbgOut("Error walking %hs import modules: %s", g_szWerDllName, error.what());
+        DbgOut("Error walking %hs import modules: %hs", g_szWerDllName, error.what());
     }
 
     hmodFaultRep = GetModuleHandleA(g_szFaultRepDllName);
@@ -96,7 +96,7 @@ void HandleProcessAttach(HMODULE hModule)
         }
         catch (CPEModuleWalkerError & error)
         {
-            DbgOut("Error walking %hs import modules: %s", g_szFaultRepDllName, error.what());
+            DbgOut("Error walking %hs import modules: %hs", g_szFaultRepDllName, error.what());
         }
     }
     else

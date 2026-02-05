@@ -24,8 +24,12 @@
 #include "Utils.h"
 
 #undef DbgOut
+#ifdef _DEBUG
 #define DbgOut(kwszDebugFormatString, ...) \
     _DbgOut(L"WerTweak: " kwszDebugFormatString, __VA_ARGS__)
+#else
+#define DbgOut(kwszDebugFormatString, ...)
+#endif
 
 #define TRANSLATE_HPSS_SEGMENT_NAME ".thpss"
 

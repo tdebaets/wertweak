@@ -188,6 +188,7 @@
     <ClInclude Include="..\WerTweak.h" />
     <ClInclude Include="FaultRepHook.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="WERExportHook.h" />
     <ClInclude Include="WERFaultHook.h" />
     <ClInclude Include="WERHook.h" />
@@ -213,6 +214,9 @@
     <ProjectReference Include="..\..\common\C\libcommon\VS2019\libcommon.vcxproj">
       <Project>{3e4d08f3-e8d7-4ee7-9a80-768d0973813a}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="WerTweak.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

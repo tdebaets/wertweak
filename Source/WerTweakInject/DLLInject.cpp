@@ -228,14 +228,22 @@ void CWERFaultDLLInject::OnProcessExit(DWORD                        dwProcessID,
 
 void CWERFaultDLLInject::OnDbgOut(LPCWSTR wszFormat, va_list argList)
 {
-    PWCHAR wszMessage = NULL;
+    INT     cbMessage   = 0;
+    PWCHAR  wszMessage  = NULL;
 
-    if (FormatArgListAlloc(wszFormat, argList, &wszMessage) == 0)
+    cbMessage = FormatArgListGetBufSize(wszFormat, argList);
+    if (cbMessage == 0)
         return;
+
+    wszMessage = (PWCHAR)_malloca(cbMessage);
+    if (!wszMessage)
+        return;
+
+    StringCbVPrintfW(wszMessage, cbMessage, wszFormat, argList);
 
     DbgOut("%s", wszMessage);
 
-    FormatArgListFree(&wszMessage);
+    _freea(wszMessage);
 }
 
 /*

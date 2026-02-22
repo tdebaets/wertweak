@@ -28,7 +28,6 @@
 #include "DLLInject.h"
 #include "WerTweakInject.h"
 
-// TODO: retest on 32-bit OS
 // TODO: fix release mode WerTweak64.exe crashing on process close when handling hang/crash (only on Win10?)
 // TODO: retest with crash handling
 // TODO: test on Win11 insider preview

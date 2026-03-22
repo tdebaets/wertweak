@@ -34,7 +34,6 @@ static const LPCSTR g_szPssQuerySnapshotName        = "PssQuerySnapshot";
 static const LPCSTR g_szPssDuplicateSnapshotName    = "PssDuplicateSnapshot";
 static const LPCSTR g_szPssWalkSnapshotName         = "PssWalkSnapshot";
 
-// TODO: make sure that native/non-native x86 debuggee still works
 TRANSLATE_HPSS_FUNC HPSS TranslateSnapshotHandleByDebugger(HPSS hSnapshot, DWORD dwFlags)
 {
     HPSS               *phSnapshot      = &hSnapshot;

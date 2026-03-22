@@ -28,10 +28,6 @@
 #include "DLLInject.h"
 #include "WerTweakInject.h"
 
-// TODO: fix release mode WerTweak64.exe crashing on process close when handling hang/crash (only on Win10?)
-// TODO: retest with crash handling
-// TODO: test on Win11 insider preview
-// TODO: retest WerpTraceSnapshotStatistics hook
 // TODO: make sure that the WER DontShowUI policy is also set to disabled (otherwise there's no UI at all)
 //   HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting\DontShowUI
 //   HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\DontShowUI
